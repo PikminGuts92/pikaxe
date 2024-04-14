@@ -6,10 +6,10 @@ edition.workspace = true
 
 [dependencies]
 grim = { workspace = true, features = [ "audio" ] }
-eframe = "0.26.2"
-egui_plot = "0.26.2"
+eframe = "0.27.2"
+egui_plot = "0.27.2"
 keyframe = "1.1.1"
-nalgebra = "0.32.4"
+nalgebra = "0.32.5"
 #rerun = "0.2.0"
 shared = { path = "../shared" }
 

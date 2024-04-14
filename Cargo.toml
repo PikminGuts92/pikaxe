@@ -32,7 +32,7 @@ thiserror = "1.0.58"
 
 # dev-dependencies
 criterion = "0.5.1"
-rstest = "0.18.2"
+rstest = "0.19.0"
 
 [workspace.lints.rust]
 dead_code = "allow"
