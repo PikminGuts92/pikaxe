@@ -415,7 +415,7 @@ pub fn write_rgba_to_vec(width: u32, height: u32, rgba: &[u8]) -> Result<Vec<u8>
     let mut png_data = Vec::new();
 
     let encoder = image::codecs::png::PngEncoder::new(&mut png_data);
-    encoder.write_image(&image, width, height, image::ColorType::Rgba8).unwrap();
+    encoder.write_image(&image, width, height, image::ExtendedColorType::Rgba8).unwrap();
 
     Ok(png_data)
 }
