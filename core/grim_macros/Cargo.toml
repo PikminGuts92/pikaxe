@@ -10,9 +10,9 @@ proc-macro = true
 [dependencies]
 grim_traits = { path = "../grim_traits" }
 lazy_static = { workspace = true }
-proc-macro2 = "1.0.79"
+proc-macro2 = "1.0.86"
 quote = "1.0.36"
-syn = { version = "2.0.58", default-features = false, features = [ "clone-impls", "derive", "parsing", "printing", "proc-macro" ] }
+syn = { version = "2.0.68", default-features = false, features = [ "clone-impls", "derive", "parsing", "printing", "proc-macro" ] }
 
 [lints]
 workspace = true
