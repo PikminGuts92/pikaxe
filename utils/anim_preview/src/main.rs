@@ -14,10 +14,9 @@ use nalgebra as na;
 use rerun::external::glam;
 use rerun::{
     coordinates::{Handedness, SignedAxis3},
-    components::{LineStrip3D, Position3D, Radius, Scalar, Transform3D, ViewCoordinates},
+    components::{LineStrip3D, Position3D, Radius, Scalar, ViewCoordinates},
     RecordingStream, RecordingStreamBuilder,
     time::Timeline,
-    transform::TranslationRotationScale3D,
 };
 use rerun::{Arrows3D, Points3D};
 
