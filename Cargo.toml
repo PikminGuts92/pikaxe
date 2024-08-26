@@ -18,21 +18,21 @@ authors = ["PikminGuts92"]
 edition = "2021"
 
 [workspace.dependencies]
-clap = { version = "4.5.7", features = ["derive"] }
+clap = { version = "4.5.16", features = ["derive"] }
 gltf = { version = "=1.4.0", default-features = false, features = [ "import", "names", "utils" ] }
 gltf-json = { version = "=1.4.0", features = [ "names" ] }
 grim = { path = "core/grim" }
 itertools = "0.13.0"
 lazy_static = "1.5.0"
-log = "0.4.21"
-serde = { version = "1.0.203", features = ["derive"] }
-serde_json = "1.0.117"
+log = "0.4.22"
+serde = { version = "1.0.209", features = ["derive"] }
+serde_json = "1.0.127"
 simplelog = "0.12.2"
-thiserror = "1.0.61"
+thiserror = "1.0.63"
 
 # dev-dependencies
 criterion = "0.5.1"
-rstest = "0.21.0"
+rstest = "0.22.0"
 
 [workspace.lints.rust]
 dead_code = "allow"
