@@ -10,7 +10,7 @@ default-members = [
     #"apps/ui/*",
     "core/*"
 ]
-resolver = "2" # Super duper important for bevy!
+resolver = "2"
 
 [workspace.package]
 version = "0.1.0"
@@ -46,5 +46,5 @@ opt-level = 3
 [profile.release]
 codegen-units = 1
 lto = true
-opt-level = 'z'  # Optimize for size
+opt-level = 'z' # Optimize for size
 strip = true
