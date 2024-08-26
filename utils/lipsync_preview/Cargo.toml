@@ -6,8 +6,8 @@ edition.workspace = true
 
 [dependencies]
 grim = { workspace = true, features = [ "audio" ] }
-eframe = "0.27.2"
-egui_plot = "0.27.2"
+eframe = "0.28.1"
+egui_plot = "0.28.1"
 keyframe = "1.1.1"
 nalgebra = "0.33.0"
 #rerun = "0.2.0"

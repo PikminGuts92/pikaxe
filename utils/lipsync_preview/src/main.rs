@@ -33,7 +33,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     run_native(
         "Lipsync Preview",
         ops,
-        Box::new(|_cc| Box::new(app))
+        Box::new(|_cc| Ok(Box::new(app)))
     )
     .map_err(|e| e.into())
 }
