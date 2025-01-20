@@ -1870,7 +1870,7 @@ impl GltfExporter {
             ]);
 
             // TODO: Decode at earlier step...
-            let bone_samples = [&char_clip.full, &char_clip.one]
+            let bone_samples = [&char_clip.one, &char_clip.full]
                 .iter()
                 .flat_map(|cbs| cbs.decode_samples(info)
                     .into_iter()
@@ -2019,7 +2019,10 @@ impl GltfExporter {
                         extensions: None,
                         extras: Default::default()
                     });
-                } else {
+                }
+                // Don't add empty data if sample not found...
+                // Targets can be shared between one/full anims and split into pos/rot/scale elements
+                /*else {
                     // Add empty pos sample
                     let input_idx = acc_builder.add_scalar(
                         format!("{}_{}_translation_input", clip_name, bone_name),
@@ -2056,7 +2059,7 @@ impl GltfExporter {
                         extensions: None,
                         extras: Default::default()
                     });
-                }
+                }*/
 
                 /*let mut rotation_samples = [
                     bone.quat
