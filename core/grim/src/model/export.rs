@@ -905,7 +905,7 @@ impl GltfExporter {
             .nodes
             .iter()
             .map(|n| n.value())
-            .filter(|_| false)
+            //.filter(|_| false)
             .collect::<Vec<_>>();
 
         let mut skins = Vec::new();
@@ -933,7 +933,8 @@ impl GltfExporter {
                     joints
                         .iter()
                         .map(|(_, m)| m.as_slice().try_into().unwrap_or_default())
-                        .collect::<Vec<[f32; 16]>>()
+                        .collect::<Vec<[f32; 16]>>(),
+                    BufferType::Skin
                 );
 
                 skins.push(json::Skin {
@@ -1206,7 +1207,8 @@ impl GltfExporter {
 
             let pos_idx = acc_builder.add_array(
                 format!("{}_pos", mesh.get_name()),
-                mesh.get_vertices().iter().map(|v| [v.pos.x, v.pos.y, v.pos.z])
+                mesh.get_vertices().iter().map(|v| [v.pos.x, v.pos.y, v.pos.z]),
+                BufferType::Mesh
             );
 
             let norm_idx = acc_builder.add_array(
@@ -1215,12 +1217,14 @@ impl GltfExporter {
                     // PS2 norms aren't normalized?
                     let v = na::Vector3::new(v.pos.x, v.pos.y, v.pos.y).normalize();
                     [v[0], v[1], v[2]]
-                })
+                }),
+                BufferType::Mesh
             );
 
             let uv_idx = acc_builder.add_array(
                 format!("{}_uv", mesh.get_name()),
-                mesh.get_vertices().iter().map(|v| [v.uv.u, v.uv.v])
+                mesh.get_vertices().iter().map(|v| [v.uv.u, v.uv.v]),
+                BufferType::Mesh
             );
 
             let mut weight_idx = None;
@@ -1273,13 +1277,15 @@ impl GltfExporter {
                 // Add bone weights
                 weight_idx = acc_builder.add_array(
                     format!("{}_weight", mesh.get_name()),
-                    conv_weights
+                    conv_weights,
+                    BufferType::Mesh
                 );
 
                 // Add bone indices
                 bone_idx = acc_builder.add_array(
                     format!("{}_bone", mesh.get_name()),
-                    conv_bones
+                    conv_bones,
+                    BufferType::Mesh
                 );
 
                 // Get first skin (all bones should use the same skin...)
@@ -1305,7 +1311,8 @@ impl GltfExporter {
             // Need to be scalar for some reason
             let face_idx = acc_builder.add_scalar(
                 format!("{}_face", mesh.get_name()),
-                mesh.get_faces().iter().map(|f| f.to_owned()).flatten()
+                mesh.get_faces().iter().map(|f| f.to_owned()).flatten(),
+                BufferType::Mesh
             );
 
             let mesh_idx = meshes.len();
@@ -1708,12 +1715,14 @@ impl GltfExporter {
                     if !anim.trans_keys.is_empty() {
                         let input_idx = acc_builder.add_scalar(
                             format!("{}_translation_input", anim.get_name()),
-                            anim.trans_keys.iter().map(|k| k.pos)
+                            anim.trans_keys.iter().map(|k| k.pos),
+                            BufferType::Animation
                         ).unwrap();
 
                         let output_idx = acc_builder.add_array(
                             format!("{}_translation_output", anim.get_name()),
-                            anim.trans_keys.iter().map(|k| [k.value.x, k.value.y, k.value.z])
+                            anim.trans_keys.iter().map(|k| [k.value.x, k.value.y, k.value.z]),
+                            BufferType::Animation
                         ).unwrap();
 
                         channels.push(json::animation::Channel {
@@ -1741,12 +1750,14 @@ impl GltfExporter {
                     if !anim.rot_keys.is_empty() {
                         let input_idx = acc_builder.add_scalar(
                             format!("{}_rotation_input", anim.get_name()),
-                            anim.rot_keys.iter().map(|k| k.pos)
+                            anim.rot_keys.iter().map(|k| k.pos),
+                            BufferType::Animation
                         ).unwrap();
 
                         let output_idx = acc_builder.add_array(
                             format!("{}_rotation_output", anim.get_name()),
-                            anim.rot_keys.iter().map(|k| [k.value.x, k.value.y, k.value.z, k.value.w])
+                            anim.rot_keys.iter().map(|k| [k.value.x, k.value.y, k.value.z, k.value.w]),
+                            BufferType::Animation
                         ).unwrap();
 
                         channels.push(json::animation::Channel {
@@ -1774,12 +1785,14 @@ impl GltfExporter {
                     if !anim.scale_keys.is_empty() {
                         let input_idx = acc_builder.add_scalar(
                             format!("{}_scale_input", anim.get_name()),
-                            anim.scale_keys.iter().map(|k| k.pos)
+                            anim.scale_keys.iter().map(|k| k.pos),
+                            BufferType::Animation
                         ).unwrap();
 
                         let output_idx = acc_builder.add_array(
                             format!("{}_scale_output", anim.get_name()),
-                            anim.scale_keys.iter().map(|k| [k.value.x, k.value.y, k.value.z])
+                            anim.scale_keys.iter().map(|k| [k.value.x, k.value.y, k.value.z]),
+                            BufferType::Animation
                         ).unwrap();
 
                         channels.push(json::animation::Channel {
@@ -1973,7 +1986,8 @@ impl GltfExporter {
                     let input_idx = acc_builder.add_scalar(
                         format!("{}_{}_translation_input", clip_name, bone_name),
                         //frames.iter().map(|f| *f)
-                        samples.iter().enumerate().map(|(i, _)| (i as f32) * FPS)
+                        samples.iter().enumerate().map(|(i, _)| (i as f32) * FPS),
+                        BufferType::Animation
                     ).unwrap();
 
                     let output_idx = acc_builder.add_array(
@@ -1982,7 +1996,8 @@ impl GltfExporter {
                             let v = na::Vector3::new(s.x * w, s.y * w, s.z * w);
 
                             [v.x, v.y, v.z]
-                        })
+                        }),
+                        BufferType::Animation
                     ).unwrap();
 
                     channels.push(json::animation::Channel {
@@ -2009,7 +2024,8 @@ impl GltfExporter {
                     let input_idx = acc_builder.add_scalar(
                         format!("{}_{}_translation_input", clip_name, bone_name),
                         //frames.iter().map(|f| *f)
-                        vec![0.0]
+                        vec![0.0],
+                        BufferType::Animation
                     ).unwrap();
 
                     let output_idx = acc_builder.add_array(
@@ -2017,7 +2033,8 @@ impl GltfExporter {
                         {
                             let v = node_trans;
                             vec![[v.x, v.y, v.z]]
-                        }
+                        },
+                        BufferType::Animation
                     ).unwrap();
 
                     channels.push(json::animation::Channel {
@@ -2137,12 +2154,14 @@ impl GltfExporter {
                     let input_idx = acc_builder.add_scalar(
                         format!("{}_{}_rotation_input", clip_name, bone_name),
                         //frames.iter().map(|f| *f)
-                        rotation_samples.iter().enumerate().map(|(i, _)| (i as f32) * FPS)
+                        rotation_samples.iter().enumerate().map(|(i, _)| (i as f32) * FPS),
+                        BufferType::Animation
                     ).unwrap();
 
                     let output_idx = acc_builder.add_array(
                         format!("{}_{}_rotation_output", clip_name, bone_name),
-                        rotation_samples.into_iter().map(|s| [s[0], s[1], s[2], s[3]])
+                        rotation_samples.into_iter().map(|s| [s[0], s[1], s[2], s[3]]),
+                        BufferType::Animation
                     ).unwrap();
 
                     channels.push(json::animation::Channel {
@@ -2242,7 +2261,7 @@ mod tests {
 
         //acc_builder.add_array_f32([[0.0f32, 0.1f32, 0.2f32]]);
 
-        acc_builder.add_array("", [[0.0f32, 0.1f32, 0.2f32]]);
+        acc_builder.add_array("", [[0.0f32, 0.1f32, 0.2f32]], BufferType::Animation);
         //acc_builder.add("", [0.0f32, 0.1f32, 0.2f32]);
 
         //assert!(false);

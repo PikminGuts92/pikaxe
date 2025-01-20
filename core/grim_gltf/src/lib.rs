@@ -3,9 +3,16 @@ use itertools::*;
 use serde::ser::Serialize;
 use std::collections::HashMap;
 
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum BufferType {
+    Mesh,
+    Skin,
+    Animation
+}
+
 pub struct AccessorBuilder {
     // Key = stride, Value = (idx, data)
-    working_data: HashMap<usize, (usize, Vec<u8>)>,
+    working_data: HashMap<(usize, BufferType), (usize, Vec<u8>)>,
     accessors: Vec<json::Accessor>,
 }
 
@@ -21,14 +28,14 @@ impl AccessorBuilder {
         N * T::size()
     }
 
-    fn update_buffer_view<const N: usize, T: ComponentValue>(&mut self, mut data: Vec<u8>) -> (usize, usize) {
+    fn update_buffer_view<const N: usize, T: ComponentValue>(&mut self, mut data: Vec<u8>, buffer_type: BufferType) -> (usize, usize) {
         let stride = self.calc_stride::<N, T>();
         let data_size = data.len();
         let next_idx = self.working_data.len();
 
         // Upsert buffer data
         let (idx, buff) = self.working_data
-            .entry(stride)
+            .entry((stride, buffer_type))
             .and_modify(|(_, b)| b.append(&mut data))
             .or_insert_with(|| (next_idx, data));
 
@@ -36,12 +43,12 @@ impl AccessorBuilder {
         (*idx, buff.len() - data_size)
     }
 
-    pub fn add_scalar<S: Into<String>, T: ComponentValue, U: IntoIterator<Item = T>>(&mut self, name: S, data: U) -> Option<usize> {
+    pub fn add_scalar<S: Into<String>, T: ComponentValue, U: IntoIterator<Item = T>>(&mut self, name: S, data: U, buffer_type: BufferType) -> Option<usize> {
         // Map to iter of single-item arrays (definitely hacky)
-        self.add_array(name, data.into_iter().map(|d| [d]))
+        self.add_array(name, data.into_iter().map(|d| [d]), buffer_type)
     }
 
-    pub fn add_array<const N: usize, S: Into<String>, T: ComponentValue, U: IntoIterator<Item = V>, V: Into<[T; N]>>(&mut self, name: S, data: U) -> Option<usize> {
+    pub fn add_array<const N: usize, S: Into<String>, T: ComponentValue, U: IntoIterator<Item = V>, V: Into<[T; N]>>(&mut self, name: S, data: U, buffer_type: BufferType) -> Option<usize> {
         let comp_type = T::get_component_type();
 
         let acc_type = match N {
@@ -80,7 +87,7 @@ impl AccessorBuilder {
         }
 
         // Update buffer views
-        let (buff_idx, buff_off) = self.update_buffer_view::<N, T>(data_stream);
+        let (buff_idx, buff_off) = self.update_buffer_view::<N, T>(data_stream, buffer_type);
 
         let acc_index = self.accessors.len();
 
@@ -123,7 +130,7 @@ impl AccessorBuilder {
         let mut views = Vec::new();
         let mut all_data = Vec::new();
 
-        for (_idx, stride, mut data) in view_data {
+        for (_idx, (stride, buffer_type), mut data) in view_data {
             // Pad buffer view if required
             let padded_size = align_to_multiple_of_four(data.len());
             if padded_size > data.len() {
@@ -141,9 +148,9 @@ impl AccessorBuilder {
                 name: None,
                 byte_length: data_size.into(),
                 byte_offset: Some(data_offset.into()),
-                byte_stride: match stride {
-                    64 => None, // Hacky way to disable writing stride for inverse bind transforms
-                    s if s % 4 == 0 => Some(json::buffer::Stride(stride)),
+                byte_stride: match (stride, buffer_type) {
+                    (_, bt) if bt.eq(&BufferType::Animation) || bt.eq(&BufferType::Skin) => None,
+                    (s, _) if s % 4 == 0 => Some(json::buffer::Stride(stride)),
                     _ => None // Don't encode if not multiple
                 },
                 buffer: json::Index::new(0),
