@@ -120,6 +120,103 @@ impl AccessorBuilder {
         Some(acc_index)
     }
 
+    pub fn get_array_by_name_mut<T: ComponentValue, const N: usize>(&mut self, name: &str, buffer_type: BufferType) -> Option<&mut [[T; N]]> {
+        let stride = self.calc_stride::<N, T>();
+
+        // TODO: Validate com_type and stride?
+        let (_bv_idx, b_off, count, _com_type) = self
+            .accessors
+            .iter()
+            .find(|acc| acc.name.as_ref().map(|n| n.eq(name)).unwrap_or_default())
+            .map(|acc| (
+                acc.buffer_view.as_ref().map(|bv| bv.value()).unwrap(),
+                acc.byte_offset.as_ref().map(|bo| bo.0 as usize).unwrap(),
+                acc.count.0 as usize,
+                *acc.component_type.as_ref().unwrap()
+            ))?;
+
+        let (_buf_idx_wd, buffer) = self
+            .working_data
+            .get_mut(&(stride, buffer_type))?;
+
+        let data = &mut buffer[b_off..(b_off + (stride * count))];
+
+        //let res: &mut [f32] = cast_slice_mut(data);
+        //let mut bytes: [u8; 7] = [1, 2, 3, 4, 5, 6, 7];
+
+        let (_prefix, new_data, _suffix) = unsafe { data.align_to_mut::<[T; N]>() };
+        Some(new_data)
+    }
+
+    pub fn recalc_min_max_values<T: ComponentValue, const N: usize>(&mut self, name: &str, buffer_type: BufferType) {
+        let stride = self.calc_stride::<N, T>();
+
+        // TODO: Validate com_type and stride?
+        let Some((_bv_idx, b_off, count, _com_type)) = self
+            .accessors
+            .iter()
+            .find(|acc| acc.name.as_ref().map(|n| n.eq(name)).unwrap_or_default())
+            .map(|acc| (
+                acc.buffer_view.as_ref().map(|bv| bv.value()).unwrap(),
+                acc.byte_offset.as_ref().map(|bo| bo.0 as usize).unwrap(),
+                acc.count.0 as usize,
+                *acc.component_type.as_ref().unwrap()
+            )) else {
+                return;
+            };
+
+        let Some((_buf_idx_wd, buffer)) = self
+            .working_data
+            .get_mut(&(stride, buffer_type)) else {
+                return;
+            };
+
+        let data = &mut buffer[b_off..(b_off + (stride * count))];
+        let (_prefix, new_data, _suffix) = unsafe { data.align_to::<[T; N]>() };
+
+        let (min, max) = new_data
+            .iter()
+            .fold(([T::max(); N], [T::min(); N]), |(mut min, mut max), item| {
+                let mut i = 0;
+                for v in item.iter() {
+                    // Calc min + max values
+                    min[i] = min[i].get_min(*v);
+                    max[i] = max[i].get_max(*v);
+
+                    i += 1;
+                }
+
+                (min, max)
+            });
+
+        let acc_type = match N {
+            1 => json::accessor::Type::Scalar,
+            2 => json::accessor::Type::Vec2,
+            3 => json::accessor::Type::Vec3,
+            4 => json::accessor::Type::Vec4,
+            9 => json::accessor::Type::Mat3,
+            16 => json::accessor::Type::Mat4,
+            _ => unimplemented!()
+        };
+
+        let (min_value, max_value) = Self::get_min_max_values(
+            &acc_type,
+            min,
+            max
+        ).unwrap();
+
+        // Update accessor
+        let accessor = self
+            .accessors
+            .iter_mut()
+            .find(|acc| acc.name.as_ref().map(|n| n.eq(name)).unwrap_or_default());
+
+        if let Some(acc) = accessor {
+            acc.min = Some(min_value);
+            acc.max = Some(max_value);
+        }
+    }
+
     fn generate_buffer_views(&mut self) -> (Vec<json::buffer::View>, Vec<u8>) {
         // Get view info and sort by assigned index
         let view_data = self.working_data
