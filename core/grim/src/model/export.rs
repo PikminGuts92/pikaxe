@@ -963,7 +963,8 @@ impl GltfExporter {
             .map(|n| (
                 n.name.as_ref().unwrap(),
                 &n.children,
-                parent_mat * n.matrix
+                // Matrix on node was already decomposed into individual T*R*S parts
+                /*parent_mat * n.matrix
                     .map(|m| na::Matrix4::from_column_slice(&m))
                     .or_else(|| {
                         // Re-construct into trs
@@ -989,7 +990,27 @@ impl GltfExporter {
                             rotate.to_homogeneous())
                             .append_nonuniform_scaling(&scale))
                     })
-                    .unwrap_or_default()
+                    .unwrap_or_default()*/
+                if depth == 0 {
+                    na::Matrix4::identity()
+                } else {
+                    parent_mat * n
+                        .name
+                        .as_ref()
+                        .and_then(|n| self.get_transform(n))
+                        .map(|trans| {
+                            let m = trans.get_local_xfm();
+
+                            na::Matrix4::new(
+                                // Column-major order...
+                                m.m11, m.m21, m.m31, m.m41,
+                                m.m12, m.m22, m.m32, m.m42,
+                                m.m13, m.m23, m.m33, m.m43,
+                                m.m14, m.m24, m.m34, m.m44
+                            )
+                        })
+                        .unwrap_or_default()
+                }
             ))
             .unwrap();
 
@@ -1166,6 +1187,11 @@ impl GltfExporter {
         let mut mesh_map = HashMap::new();
 
         for mesh in milo_meshes {
+            let has_base_texture = mat_map
+                .get(&mesh.mat)
+                .map(|mi| gltf.materials[*mi].pbr_metallic_roughness.base_color_texture.is_some())
+                .unwrap_or_default();
+
             /*let bone_offsets = mesh
                 .bones
                 .iter()
@@ -1221,11 +1247,16 @@ impl GltfExporter {
                 BufferType::Mesh
             );
 
-            let uv_idx = acc_builder.add_array(
-                format!("{}_uv", mesh.get_name()),
-                mesh.get_vertices().iter().map(|v| [v.uv.u, v.uv.v]),
-                BufferType::Mesh
-            );
+            // Don't add uvs if no texture associated
+            let uv_idx = if has_base_texture {
+                acc_builder.add_array(
+                    format!("{}_uv", mesh.get_name()),
+                    mesh.get_vertices().iter().map(|v| [v.uv.u, v.uv.v]),
+                    BufferType::Mesh
+                )
+            } else {
+                None
+            };
 
             let mut weight_idx = None;
             let mut bone_idx = None;
@@ -1397,6 +1428,9 @@ impl GltfExporter {
         // Update skins for each mesh node updated
         for (node_idx, skin_idx) in meshes_to_update {
             gltf.nodes[node_idx].skin = Some(json::Index::new(skin_idx as u32));
+            //gltf.nodes[node_idx].translation = None;
+            //gltf.nodes[node_idx].rotation = None;
+            //gltf.nodes[node_idx].scale = None;
         }
 
         // Assign meshes and return mesh indices
@@ -1404,7 +1438,7 @@ impl GltfExporter {
         mesh_map
     }
 
-    fn final_process_nodes(&self, gltf: &mut json::Root, mesh_map: &HashMap<String, usize>, joint_map: &HashMap<String, (usize, usize)>) {
+    fn final_process_nodes(&self, gltf: &mut json::Root, mesh_map: &HashMap<String, usize>, joint_map: &HashMap<String, (usize, usize)>, acc_builder: &mut AccessorBuilder) {
         // Useless code... does nothing
         for i in 0..gltf.nodes.len() {
             // Get node name
@@ -1423,7 +1457,29 @@ impl GltfExporter {
             if let Some((skin_idx, _)) = joint_map.get(&node_name) {
                 // Update skin index for node
                 gltf.nodes[i].skin = Some(json::Index::new(*skin_idx as u32));
+                //gltf.nodes[i].translation = None;
+                //gltf.nodes[i].rotation = None;
+                //gltf.nodes[i].scale = None;
             }
+
+            /*if gltf.nodes[i].mesh.is_some() {
+                gltf.nodes[i].translation = None;
+                gltf.nodes[i].rotation = None;
+                gltf.nodes[i].scale = None;
+            }*/
+        }
+
+        for i in 0..gltf.skins.len() {
+            // Move skinned mesh nodes to root skeleton node
+            let old_skeleton_node_idx = gltf
+                .skins[i]
+                .skeleton
+                .map(|s| s.value())
+                .unwrap();
+
+            let scene_idx = 0; // TODO: Get from skin somehow...?
+
+            self.move_skinned_mesh_to_skeleton_root(gltf, scene_idx, old_skeleton_node_idx, old_skeleton_node_idx, acc_builder);
         }
 
         /*let milo_meshes = self
@@ -1437,6 +1493,132 @@ impl GltfExporter {
             .skins
             .iter()
             .map(|s| s.skeleton.unwrap().value());*/
+    }
+
+    fn move_skinned_mesh_to_skeleton_root(&self, gltf: &mut json::Root, scene_idx: usize, parent_idx: usize, node_idx: usize, acc_builder: &mut AccessorBuilder) {
+        if parent_idx != node_idx && gltf.nodes[node_idx].skin.is_some() {
+            // Remove TRS
+            /*gltf.nodes[node_idx].translation = None;
+            gltf.nodes[node_idx].rotation = None;
+            gltf.nodes[node_idx].scale = None;*/
+
+            // Move from old parent to scene
+            //let children = gltf.nodes[parent_idx].children.as_mut().unwrap();
+            gltf.nodes[parent_idx].children.as_mut().unwrap().retain(|c| !c.value().eq(&node_idx));
+            gltf.scenes[scene_idx].nodes.push(json::Index::new(node_idx as u32));
+
+            if gltf.nodes[node_idx].mesh.is_some() {
+                // Move node transforms
+                gltf.nodes[node_idx].translation = None;
+                gltf.nodes[node_idx].rotation = None;
+                gltf.nodes[node_idx].scale = None;
+
+                // Translate mesh coords
+                let pos_coords = gltf
+                    .nodes[node_idx]
+                    .name
+                    .as_ref()
+                    .and_then(|n| acc_builder.get_array_by_name_mut::<f32, 3>(&format!("{n}_pos"), BufferType::Mesh));
+
+                if let Some(pos_coords) = pos_coords {
+                    let local_matrix =  gltf
+                        .nodes[node_idx]
+                        .name
+                        .as_ref()
+                        .and_then(|n| self.get_transform(n))
+                        .map(|trans| {
+                            let is_root = self.is_transform_root(trans);
+
+                            if is_root {
+                                let m = trans.get_world_xfm();
+
+                                let nam = na::Matrix4::new(
+                                    // Column-major order...
+                                    m.m11, m.m21, m.m31, m.m41,
+                                    m.m12, m.m22, m.m32, m.m42,
+                                    m.m13, m.m23, m.m33, m.m43,
+                                    m.m14, m.m24, m.m34, m.m44
+                                );
+
+                                println!("{} is root!", trans.get_name()); // TODO: Remove line
+
+                                nam //* super::MILOSPACE_TO_GLSPACE
+                            } else {
+                                /*let wm = {
+                                    let m = trans.get_world_xfm();
+                                    na::Matrix4::new(
+                                        // Column-major order...
+                                        m.m11, m.m21, m.m31, m.m41,
+                                        m.m12, m.m22, m.m32, m.m42,
+                                        m.m13, m.m23, m.m33, m.m43,
+                                        m.m14, m.m24, m.m34, m.m44
+                                    )
+                                };*/
+
+                                let m = trans.get_local_xfm();
+
+                                /*wm * na::Matrix4::new(
+                                    // Column-major order...
+                                    m.m11, m.m21, m.m31, m.m41,
+                                    m.m12, m.m22, m.m32, m.m42,
+                                    m.m13, m.m23, m.m33, m.m43,
+                                    m.m14, m.m24, m.m34, m.m44
+                                ).try_inverse().unwrap_or_default()*/
+
+                                na::Matrix4::new(
+                                    // Column-major order...
+                                    m.m11, m.m21, m.m31, m.m41,
+                                    m.m12, m.m22, m.m32, m.m42,
+                                    m.m13, m.m23, m.m33, m.m43,
+                                    m.m14, m.m24, m.m34, m.m44
+                                )
+                            }
+                        })
+                        .unwrap_or_default();
+
+                    for [x, y, z] in pos_coords {
+                        let v = local_matrix.transform_vector(&na::Vector3::new(*x, *y, *z));
+
+                        *x = *v.get(0).unwrap();
+                        *y = *v.get(1).unwrap();
+                        *z = *v.get(2).unwrap();
+                    }
+
+                    // TODO: Come up with better way to share name
+                    let mesh_name = gltf
+                        .nodes[node_idx]
+                        .name
+                        .as_ref()
+                        .unwrap();
+
+                    acc_builder.recalc_min_max_values::<f32, 3>(&format!("{mesh_name}_pos"), BufferType::Mesh);
+                }
+            }
+
+            // Remove children if empty
+            let children_empty = gltf.nodes[parent_idx].children.as_ref().map(|c| c.is_empty()).unwrap_or_default();
+            if children_empty {
+                gltf.nodes[parent_idx].children.take();
+            }
+        }
+
+        // Process children
+        let child_count = gltf
+            .nodes
+            .get(node_idx)
+            .and_then(|n| n.children.as_ref().map(|c| c.len()))
+            .unwrap_or_default();
+
+        for i in (0..child_count).rev() {
+            let child_node_idx = gltf
+                .nodes
+                .get(node_idx)
+                .and_then(|n| n.children.as_ref().and_then(|c| c.get(i)))
+                .map(|c| c.value())
+                .unwrap();
+
+            self.move_skinned_mesh_to_skeleton_root(gltf, scene_idx, node_idx, child_node_idx, acc_builder);
+        }
     }
 
     /*fn update_meshes_with_skins(&self, gltf: &mut json::Root, node: usize, skin: usize, meshes: &) {
@@ -1515,7 +1697,7 @@ impl GltfExporter {
 
         self.process_animations(&mut gltf, &mut acc_builder);
 
-        self.final_process_nodes(&mut gltf, &mesh_indices, &joint_indices);
+        self.final_process_nodes(&mut gltf, &mesh_indices, &joint_indices, &mut acc_builder);
 
         // Write binary data
         self.build_binary(&mut gltf, acc_builder);
@@ -1652,6 +1834,18 @@ impl GltfExporter {
             .filter(|s| !s.is_empty() && !children.contains(s))
             .sorted()
             .collect()
+    }
+
+    fn is_transform_root(&self, trans: &dyn Trans) -> bool {
+        if trans.get_parent().is_empty() || trans.get_name().eq(trans.get_parent()) {
+            return true;
+        }
+
+        self.dirs_rc
+            .iter()
+            .any(|d| match &d.as_ref().dir {
+                ObjectDir::ObjectDir(dir) => dir.name.as_str().eq(trans.get_parent())
+            })
     }
 
     fn process_animations(&self, gltf: &mut json::Root, acc_builder: &mut AccessorBuilder) {
@@ -2022,7 +2216,8 @@ impl GltfExporter {
                 }
                 // Don't add empty data if sample not found...
                 // Targets can be shared between one/full anims and split into pos/rot/scale elements
-                /*else {
+                // TODO: Double check this...
+                else {
                     // Add empty pos sample
                     let input_idx = acc_builder.add_scalar(
                         format!("{}_{}_translation_input", clip_name, bone_name),
@@ -2059,7 +2254,7 @@ impl GltfExporter {
                         extensions: None,
                         extras: Default::default()
                     });
-                }*/
+                }
 
                 /*let mut rotation_samples = [
                     bone.quat
