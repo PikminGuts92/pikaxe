@@ -606,7 +606,7 @@ impl GltfExporter {
                     m.m14, m.m24, m.m34, m.m44
                 );
 
-                mat * super::MILOSPACE_TO_GLSPACE
+                super::MILOSPACE_TO_GLSPACE * mat
             },
             (Some(trans), _) => {
                 let m = trans.get_local_xfm();
@@ -1513,85 +1513,52 @@ impl GltfExporter {
                 gltf.nodes[node_idx].rotation = None;
                 gltf.nodes[node_idx].scale = None;
 
-                // Translate mesh coords
-                let pos_coords = gltf
+                // TODO: Come up with better way to share name
+                let mesh_name = gltf
                     .nodes[node_idx]
                     .name
                     .as_ref()
-                    .and_then(|n| acc_builder.get_array_by_name_mut::<f32, 3>(&format!("{n}_pos"), BufferType::Mesh));
+                    .unwrap();
 
-                if let Some(pos_coords) = pos_coords {
-                    let local_matrix =  gltf
-                        .nodes[node_idx]
-                        .name
-                        .as_ref()
-                        .and_then(|n| self.get_transform(n))
-                        .map(|trans| {
-                            let is_root = self.is_transform_root(trans);
+                let global_milo_matrix = self
+                    .get_transform(mesh_name)
+                    .map(|trans| self.get_computed_world_matrix(trans, na::Matrix4::identity())) // super::MILOSPACE_TO_GLSPACE))
+                    //.unwrap_or_default();
+                    .unwrap_or_else(|| {
+                        println!("No mat found for {}", gltf.nodes[node_idx].name.as_ref().unwrap());
+                        na::Matrix4::identity()
+                    });
 
-                            if is_root {
-                                let m = trans.get_world_xfm();
+                // Transform mesh coords
+                let mesh_pos = acc_builder.get_array_by_name_mut::<f32, 3>(&format!("{mesh_name}_pos"), BufferType::Mesh);
 
-                                let nam = na::Matrix4::new(
-                                    // Column-major order...
-                                    m.m11, m.m21, m.m31, m.m41,
-                                    m.m12, m.m22, m.m32, m.m42,
-                                    m.m13, m.m23, m.m33, m.m43,
-                                    m.m14, m.m24, m.m34, m.m44
-                                );
+                if let Some(mesh_pos) = mesh_pos {
+                    // Update positions
+                    for [x, y, z] in mesh_pos {
+                        let p = global_milo_matrix.transform_point(&na::Point3::new(*x, *y, *z));
 
-                                println!("{} is root!", trans.get_name()); // TODO: Remove line
-
-                                nam //* super::MILOSPACE_TO_GLSPACE
-                            } else {
-                                /*let wm = {
-                                    let m = trans.get_world_xfm();
-                                    na::Matrix4::new(
-                                        // Column-major order...
-                                        m.m11, m.m21, m.m31, m.m41,
-                                        m.m12, m.m22, m.m32, m.m42,
-                                        m.m13, m.m23, m.m33, m.m43,
-                                        m.m14, m.m24, m.m34, m.m44
-                                    )
-                                };*/
-
-                                let m = trans.get_local_xfm();
-
-                                /*wm * na::Matrix4::new(
-                                    // Column-major order...
-                                    m.m11, m.m21, m.m31, m.m41,
-                                    m.m12, m.m22, m.m32, m.m42,
-                                    m.m13, m.m23, m.m33, m.m43,
-                                    m.m14, m.m24, m.m34, m.m44
-                                ).try_inverse().unwrap_or_default()*/
-
-                                na::Matrix4::new(
-                                    // Column-major order...
-                                    m.m11, m.m21, m.m31, m.m41,
-                                    m.m12, m.m22, m.m32, m.m42,
-                                    m.m13, m.m23, m.m33, m.m43,
-                                    m.m14, m.m24, m.m34, m.m44
-                                )
-                            }
-                        })
-                        .unwrap_or_default();
-
-                    for [x, y, z] in pos_coords {
-                        let v = local_matrix.transform_vector(&na::Vector3::new(*x, *y, *z));
-
-                        *x = *v.get(0).unwrap();
-                        *y = *v.get(1).unwrap();
-                        *z = *v.get(2).unwrap();
+                        *x = p.x;
+                        *y = p.y;
+                        *z = p.z;
                     }
 
-                    // TODO: Come up with better way to share name
-                    let mesh_name = gltf
-                        .nodes[node_idx]
-                        .name
-                        .as_ref()
-                        .unwrap();
-
                     acc_builder.recalc_min_max_values::<f32, 3>(&format!("{mesh_name}_pos"), BufferType::Mesh);
+                }
+
+                // Transform mesh normals
+                let mesh_norms = acc_builder.get_array_by_name_mut::<f32, 3>(&format!("{mesh_name}_norm"), BufferType::Mesh);
+
+                if let Some(mesh_norms) = mesh_norms {
+                    // Update positions
+                    for [x, y, z] in mesh_norms {
+                        let v = global_milo_matrix.transform_vector(&na::Vector3::new(*x, *y, *z));
+
+                        *x = v.x;
+                        *y = v.y;
+                        *z = v.z;
+                    }
+
+                    acc_builder.recalc_min_max_values::<f32, 3>(&format!("{mesh_name}_norm"), BufferType::Mesh);
                 }
             }
 
@@ -1846,6 +1813,57 @@ impl GltfExporter {
             .any(|d| match &d.as_ref().dir {
                 ObjectDir::ObjectDir(dir) => dir.name.as_str().eq(trans.get_parent())
             })
+    }
+
+    fn get_parent_transform(&self, trans: &dyn Trans) -> Option<&dyn Trans> {
+        if trans.get_parent().is_empty() || trans.get_name().eq(trans.get_parent()) {
+            return None;
+        }
+
+        // Check dirs
+        let dir = self.dirs_rc
+            .iter()
+            .find(|d| match &d.as_ref().dir {
+                ObjectDir::ObjectDir(dir) => dir.name.as_str().eq(trans.get_parent())
+            });
+
+        if let Some(_dir) = dir {
+            // TODO: Somehow get from dir... usually identity anyways
+            //return na::Matrix4::identity();
+            return None;
+        }
+
+        self.get_transform(trans.get_parent())
+    }
+
+    fn get_computed_world_matrix(&self, trans: &dyn Trans, base: na::Matrix4<f32>) -> na::Matrix4<f32> {
+        let parent_mat = self
+            .get_parent_transform(trans)
+            .map(|pt| self.get_computed_world_matrix(pt, base));
+
+        if let Some(pm) = parent_mat {
+            let local_mat = {
+                let m = trans.get_local_xfm();
+                na::Matrix4::new(
+                    // Column-major order...
+                    m.m11, m.m21, m.m31, m.m41,
+                    m.m12, m.m22, m.m32, m.m42,
+                    m.m13, m.m23, m.m33, m.m43,
+                    m.m14, m.m24, m.m34, m.m44,
+                )
+            };
+
+            pm * local_mat
+        } else {
+            let m = trans.get_world_xfm();
+            base * na::Matrix4::new(
+                // Column-major order...
+                m.m11, m.m21, m.m31, m.m41,
+                m.m12, m.m22, m.m32, m.m42,
+                m.m13, m.m23, m.m33, m.m43,
+                m.m14, m.m24, m.m34, m.m44,
+            )
+        }
     }
 
     fn process_animations(&self, gltf: &mut json::Root, acc_builder: &mut AccessorBuilder) {
