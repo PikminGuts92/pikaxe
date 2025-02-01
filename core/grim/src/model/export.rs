@@ -1240,9 +1240,8 @@ impl GltfExporter {
             let norm_idx = acc_builder.add_array(
                 format!("{}_norm", mesh.get_name()),
                 mesh.get_vertices().iter().map(|v| {
-                    // PS2 norms aren't normalized?
-                    let v = na::Vector3::new(v.pos.x, v.pos.y, v.pos.y).normalize();
-                    [v[0], v[1], v[2]]
+                    let v = na::Vector3::new(v.normals.x, v.normals.y, v.normals.z).normalize();
+                    [v.x, v.y, v.z]
                 }),
                 BufferType::Mesh
             );
