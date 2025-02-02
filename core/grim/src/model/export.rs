@@ -1663,6 +1663,7 @@ impl GltfExporter {
         let mesh_indices = self.process_meshes(&mut gltf, &mut acc_builder, &mat_indices);
 
         self.process_animations(&mut gltf, &mut acc_builder);
+        self.calculate_inverse_kinematics(&mut gltf, &mut acc_builder);
 
         self.final_process_nodes(&mut gltf, &mesh_indices, &joint_indices, &mut acc_builder);
 
@@ -1868,7 +1869,7 @@ impl GltfExporter {
 
     fn process_animations(&self, gltf: &mut json::Root, acc_builder: &mut AccessorBuilder) {
         let mut animations = Vec::new();
-    
+
         // Map indices of all named nodes
         let node_map = gltf
             .nodes
@@ -2457,6 +2458,32 @@ impl GltfExporter {
         }
 
         gltf.animations = animations;
+    }
+
+    fn calculate_inverse_kinematics(&self, gltf: &mut gltf_json::Root, acc_builder: &mut AccessorBuilder) {
+        // Map indices of all named nodes
+        let node_map = gltf
+            .nodes
+            .iter()
+            .enumerate()
+            .filter_map(|(i, n)| n.name.as_ref().map(|s| (s.to_owned(), i)))
+            .collect::<HashMap<_, _>>();
+
+        let arms = [
+            // Shoulder -> Elbow -> Hand
+            ("bone_L-upperArm.mesh", "bone_L-foreArm.mesh", "bone_L-hand.mesh"),
+            ("bone_R-upperArm.mesh", "bone_R-foreArm.mesh", "bone_R-hand.mesh")
+        ];
+
+        for anim_idx in 0..gltf.animations.len() {
+            //let res = gltf
+            //    .animations[0]
+            //    .channels
+            //    .iter()
+            //    .filter_map(|c| node_map.get(c.sampler.value()));
+        }
+
+        //todo!()
     }
 }
 
