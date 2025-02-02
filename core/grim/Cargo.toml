@@ -18,6 +18,7 @@ grim_traits = { path = "../grim_traits" }
 half = { version = "2.4.1", default-features = false }
 image = { version = "0.25.2", default-features = false, features = [ "png" ] }
 itertools = { workspace = true }
+k = { optional = true, version = "0.32.0" }
 lazy_static = { workspace = true }
 log = { workspace = true }
 nalgebra = { version = "0.33.0", optional = true }
@@ -39,7 +40,7 @@ rstest = { workspace = true }
 audio = [ "bitstream-io", "fon", "wav" ]
 audio_experimental = []
 midi = [ "grim_midi" ]
-model = [ "gltf", "gltf-json", "grim_gltf", "nalgebra", "serde" ]
+model = [ "gltf", "gltf-json", "grim_gltf", "k", "nalgebra", "serde" ]
 python = [ "pyo3" ]
 
 [[bench]]

@@ -6,6 +6,7 @@ use grim_traits::scene::Group;
 use itertools::*;
 use gltf_json as json;
 use grim_gltf::*;
+use k;
 use nalgebra as na;
 use serde::ser::Serialize;
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -2072,24 +2073,15 @@ impl GltfExporter {
             let mut channels = Vec::new();
             let mut samplers = Vec::new();
 
-            // TODO: Delete after testing
-            let _filtered_bone_names = HashSet::from([
-                //"bone_neck.mesh"
-                "bone_spine1.mesh",
-                "bone_spine2.mesh",
-                "bone_spine3.mesh",
-            ]);
-
             // TODO: Decode at earlier step...
             let bone_samples = [&char_clip.one, &char_clip.full]
                 .iter()
                 .flat_map(|cbs| cbs.decode_samples(info)
                     .into_iter()
                     .map(|s| (s, if !cbs.frames.is_empty() { &cbs.frames } else { &default_frames })))
-                //.filter(|(b, _)| filtered_bone_names.contains(b.symbol.as_str()))
                 .collect::<Vec<_>>();
 
-            for (mut bone, _frames) in bone_samples {
+            for (bone, _frames) in bone_samples {
                 let bone_name = bone.symbol.as_str();
                 let Some(node_idx) = node_map.get(bone_name).map(|i| *i) else {
                     continue;
@@ -2193,7 +2185,7 @@ impl GltfExporter {
                 const FPS: f32 = 1. / 30.;
 
                 // Add translations (.pos)
-                if let Some((w, samples)) = bone.pos.take() {
+                if let Some((w, samples)) = bone.pos.as_ref() {
                     let input_idx = acc_builder.add_scalar(
                         format!("{}_{}_translation_input", clip_name, bone_name),
                         //frames.iter().map(|f| *f)
@@ -2328,7 +2320,7 @@ impl GltfExporter {
                     .collect::<Vec<_>>();
 
                 // Add rotations (.quat)
-                if let Some((w, samples)) = bone.quat.take() {
+                if let Some((w, samples)) = bone.quat.as_ref() {
                     for (i, s) in samples.into_iter().enumerate() {
                         let rot =  &mut rotation_samples[i];
 
@@ -2350,7 +2342,7 @@ impl GltfExporter {
                 }
 
                 // Add rotations (.rotz)
-                if let Some((w, samples)) = bone.rotz.take() {
+                if let Some((w, samples)) = bone.rotz.as_ref() {
                     for (i, z) in samples.into_iter().enumerate() {
                         let rot =  &mut rotation_samples[i];
 
@@ -2375,7 +2367,7 @@ impl GltfExporter {
 
                     let output_idx = acc_builder.add_array(
                         format!("{}_{}_rotation_output", clip_name, bone_name),
-                        rotation_samples.into_iter().map(|s| [s[0], s[1], s[2], s[3]]),
+                        rotation_samples.iter().map(|&s| [s.i, s.j, s.k, s.w]),
                         BufferType::Animation
                     ).unwrap();
 
@@ -2398,6 +2390,53 @@ impl GltfExporter {
                         extensions: None,
                         extras: Default::default()
                     });
+
+                    let upper_twist = [
+                        ("bone_L-upperArm.mesh", "bone_L-upperTwist1.mesh"),
+                        ("bone_R-upperArm.mesh", "bone_R-upperTwist1.mesh")
+                    ]
+                        .iter()
+                        .find(|(upper_arm, _)| upper_arm.eq(&bone_name))
+                        .map(|(_, upper_twist)| upper_twist);
+
+                    if let Some(upper_twist_bone) = upper_twist {
+                        // Find node index of upper twist bone
+                        let upper_twist_node_idx = node_map.get(*upper_twist_bone).map(|i| *i).unwrap();
+
+                        // Add duplicate rotations for upper twist bone
+                        let input_idx = acc_builder.add_scalar(
+                            format!("{}_{}_rotation_input", clip_name, upper_twist_bone),
+                            //frames.iter().map(|f| *f)
+                            rotation_samples.iter().enumerate().map(|(i, _)| (i as f32) * FPS),
+                            BufferType::Animation
+                        ).unwrap();
+
+                        let output_idx = acc_builder.add_array(
+                            format!("{}_{}_rotation_output", clip_name, upper_twist_bone),
+                            rotation_samples.iter().map(|&s| [s.i, s.j, s.k, s.w]),
+                            BufferType::Animation
+                        ).unwrap();
+    
+                        channels.push(json::animation::Channel {
+                            sampler: json::Index::new(samplers.len() as u32),
+                            target: json::animation::Target {
+                                node: json::Index::new(upper_twist_node_idx as u32),
+                                path: json::validation::Checked::Valid(json::animation::Property::Rotation),
+                                extensions: None,
+                                extras: Default::default()
+                            },
+                            extensions: None,
+                                extras: Default::default()
+                        });
+
+                        samplers.push(json::animation::Sampler {
+                            input: json::Index::new(input_idx as u32),
+                            output: json::Index::new(output_idx as u32),
+                            interpolation: json::validation::Checked::Valid(json::animation::Interpolation::Linear),
+                            extensions: None,
+                            extras: Default::default()
+                        });
+                    }
                 }
 
                 // Add scales (.scale)
