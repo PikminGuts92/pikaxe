@@ -320,6 +320,35 @@ pub struct ObjectDirData {
     info: SystemInfo
 }
 
+impl ObjectDirData {
+    pub fn get_base_file_name(&self) -> Option<&str> {
+        self
+            .path
+            .as_path()
+            .file_stem()
+            .and_then(|fs| fs.to_str())
+    }
+
+    pub fn get_dir_name(&self) -> &str {
+        match &self.dir {
+            ObjectDir::ObjectDir(dir) => dir.name.as_str()
+        }
+    }
+
+    pub fn get_name(&self) -> &str {
+        let dir_name = self.get_dir_name();
+
+        if dir_name.is_empty() {
+            // Use file name if empty (GH1 files)
+            self
+                .get_base_file_name()
+                .unwrap_or(dir_name)
+        } else {
+            dir_name
+        }
+    }
+}
+
 struct MappedObject<T: MiloObject> {
     parent: Rc<ObjectDirData>,
     object: T
@@ -1730,40 +1759,51 @@ impl GltfExporter {
 
     fn find_node_children<'a>(&'a self) -> HashMap<&'a str, Vec<&'a str>> {
         // Use gh1-style child hierarchy first
-        /*let (legacy_node_map, legacy_children) = self.transforms
+        let legacy_parent_map = self.transforms
             .values()
             .map(|t| &t.object as &dyn Trans)
             .chain(self.groups.values().map(|g| &g.object as &dyn Trans))
             .chain(self.meshes.values().map(|m| &m.object as &dyn Trans))
             .filter(|t| !t.get_trans_objects().is_empty())
-            .fold((HashMap::new(), HashSet::new()), |(mut map, mut ch_set), t| {
-                let parent = t.get_name().as_str();
-                let children = t.get_trans_objects()
-                    .iter()
-                    .map(|c| c.as_str())
-                    .collect::<Vec<_>>();
-
-                for child in children.iter() {
-                    ch_set.insert(*child);
+            .fold(HashMap::new(), |mut map, t| {
+                if t.get_name() != t.get_parent() || t.get_trans_objects().is_empty() {
+                    return map;
                 }
 
-                if t.get_name() != t.get_parent() {
-                    //println!("WARN: Object \"{}\", doesn't match object \"{}\"", t.get_name(), t.get_parent());
-                    println!("{} : {}", t.get_name(), t.get_parent());
+                for child in t.get_trans_objects() {
+                    map.insert(child.as_str(), t.get_name().as_str());
                 }
 
-                map.insert(parent, children);
-                (map, ch_set)
-            });*/
+                map
+            });
 
         let mut node_map = self.transforms
             .values()
-            .map(|t| &t.object as &dyn Trans)
-            .chain(self.groups.values().map(|g| &g.object as &dyn Trans))
-            .chain(self.meshes.values().map(|m| &m.object as &dyn Trans))
-            .fold(HashMap::new(), |mut acc, b| {
+            .map(|t| (&t.object as &dyn Trans, t.parent.get_name()))
+            .chain(self.groups.values().map(|g| (&g.object as &dyn Trans, g.parent.get_name())))
+            .chain(self.meshes.values().map(|m| (&m.object as &dyn Trans, m.parent.get_name())))
+            .fold(HashMap::new(), |mut acc, (b, parent_dir_name)| {
+                // Check if GH1 map exists
+                if let Some(parent) = legacy_parent_map.get(b.get_name().as_str()) {
+                    let name = b.get_name().as_str();
+
+                    acc
+                        .entry(*parent)
+                        .and_modify(|e: &mut Vec<&'a str>| e.push(name))
+                        .or_insert_with(|| vec![name]);
+
+                    return acc
+                }
+
                 if b.get_parent().eq(b.get_name()) || b.get_parent().is_empty() {
                     // If bone references self, ignore
+                    let name = b.get_name().as_str();
+
+                    acc
+                        .entry(parent_dir_name)
+                        .and_modify(|e: &mut Vec<&'a str>| e.push(name))
+                        .or_insert_with(|| vec![name]);
+
                     return acc;
                 }
 
@@ -1793,9 +1833,7 @@ impl GltfExporter {
         // Anything not in child map is considered root
         self.dirs_rc
             .iter()
-            .map(|d| match &d.as_ref().dir {
-                ObjectDir::ObjectDir(dir) => dir.name.as_str()
-            })
+            .map(|d| d.get_name())
             .chain(self.transforms.values().map(|t| t.object.get_name().as_str()))
             .chain(self.groups.values().map(|g| g.object.get_name().as_str()))
             .chain(self.meshes.values().map(|m| m.object.get_name().as_str()))
