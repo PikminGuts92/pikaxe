@@ -2,6 +2,7 @@
 //mod draw;
 mod export;
 mod gltf;
+mod import;
 //mod group;
 //mod mat;
 //mod mesh;
@@ -12,6 +13,7 @@ mod tex_path;
 use std::{error::Error, fs::copy, path::Path};
 
 pub use self::export::*; // TODO: Remove later
+pub use self::import::*;
 use crate::SystemInfo;
 use crate::scene::*;
 pub(crate) use self::gltf::*;
