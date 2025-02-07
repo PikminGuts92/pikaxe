@@ -151,9 +151,9 @@ impl CharBonesSamples {
                 // Compute bone name
                 // TODO: Make more efficient
                 let bone_name = bone.symbol.to_owned()
-                    .replace(".pos", ".mesh")
-                    .replace(".quat", ".mesh")
-                    .replace(".rotz", ".mesh");
+                    .replace(".pos", "")
+                    .replace(".quat", "")
+                    .replace(".rotz", "");
 
                 // Get or insert bone sample w/ name
                 let bone_sample = bone_map

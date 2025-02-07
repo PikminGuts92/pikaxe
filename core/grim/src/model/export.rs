@@ -2121,8 +2121,8 @@ impl GltfExporter {
                 .collect::<Vec<_>>();
 
             for (bone, _frames) in bone_samples {
-                let bone_name = bone.symbol.as_str();
-                let Some(node_idx) = node_map.get(bone_name).map(|i| *i) else {
+                let bone_name = format!("{}.mesh", bone.symbol.as_str());
+                let Some(node_idx) = node_map.get(&bone_name).map(|i| *i) else {
                     continue;
                 };
 
