@@ -206,28 +206,14 @@ impl GltfImporter2 {
                         })
                     }
                 })
-                .collect::<Vec<_>>();
+                .collect();
 
             let mut clip = CharClipSamples {
                 one: CharBonesSamples {
-                    bones: one_samples
-                        .iter()
-                        .map(|s| CharBone {
-                            symbol: s.symbol.to_owned(),
-                            weight: 1.0,
-                        })
-                        .collect(),
                     samples: EncodedSamples::Uncompressed(one_samples),
                     ..Default::default()
                 },
                 full: CharBonesSamples {
-                    bones: full_samples
-                        .values()
-                        .map(|s| CharBone {
-                            symbol: s.symbol.to_owned(),
-                            weight: 1.0,
-                        })
-                        .collect(),
                     samples: EncodedSamples::Uncompressed(full_samples
                         .into_values()
                         .collect()),
@@ -238,8 +224,8 @@ impl GltfImporter2 {
 
             // Re-compute char bones from sample names
             for sam in [&mut clip.one, &mut clip.full] {
-                sam.recompute_sizes();
                 sam.generate_bones_from_samples();
+                sam.recompute_sizes();
             }
 
             assets.char_clip_samples.push(clip);
