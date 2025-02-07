@@ -3,10 +3,10 @@ use std::error::Error;
 
 use grim::SystemInfo;
 
-#[cfg(feature = "experimental")] mod milo2gltf;
+mod milo2gltf;
 mod model2group;
 use self::model2group::*;
-#[cfg(feature = "experimental")] use self::milo2gltf::*;
+use self::milo2gltf::*;
 
 // From Cargo.toml
 const PKG_NAME: &str = env!("CARGO_PKG_NAME");
@@ -25,7 +25,6 @@ struct Options {
 
 #[derive(Subcommand, Debug)]
 enum SubCommand {
-    #[cfg(feature = "experimental")]
     #[command(name = "milo2gltf", about = "Convert milo to gltf")]
     Milo2Gltf(Milo2GltfApp),
     #[command(name = "model2group", about = "Convert model to milo group")]
@@ -46,7 +45,7 @@ impl MeshTool {
 
     pub fn run(&mut self) -> Result<(), Box<dyn Error>> {
         match &mut self.options.commands {
-            #[cfg(feature = "experimental")] SubCommand::Milo2Gltf(app) => app.process(),
+            SubCommand::Milo2Gltf(app) => app.process(),
             SubCommand::Model2Group(app) => app.process()
         }
     }

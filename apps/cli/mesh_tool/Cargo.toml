@@ -9,9 +9,5 @@ clap = { workspace = true }
 grim = { workspace = true, features = [ "model" ] }
 thiserror = { workspace = true }
 
-[features]
-default = [ "experimental" ]
-experimental = []
-
 [lints]
 workspace = true
