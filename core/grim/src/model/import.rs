@@ -62,6 +62,7 @@ impl GltfImporter2 {
         // If bones have no anim events, add to "one" clips
 
         // TODO: Compute global matrix of each bone node for use in converting local gltf space to milo space
+        // TODO: Allow char clips for non-bones (i.e. bone_door in gh2)
         // Just get bones for first skin
         let bone_ids = self
             .document
@@ -209,6 +210,7 @@ impl GltfImporter2 {
                 .collect();
 
             let mut clip = CharClipSamples {
+                name: anim_name,
                 one: CharBonesSamples {
                     samples: EncodedSamples::Uncompressed(one_samples),
                     ..Default::default()

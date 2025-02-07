@@ -2456,7 +2456,8 @@ impl GltfExporter {
                         extras: Default::default()
                     });
 
-                    let upper_twist = [
+                    // Constraints should be added directly to model in blender instead
+                    /*let upper_twist = [
                         ("bone_L-upperArm.mesh", "bone_L-upperTwist1.mesh"),
                         ("bone_R-upperArm.mesh", "bone_R-upperTwist1.mesh")
                     ]
@@ -2464,8 +2465,7 @@ impl GltfExporter {
                         .find(|(upper_arm, _)| upper_arm.eq(&bone_name))
                         .map(|(_, upper_twist)| upper_twist);
 
-                    // Constraints should be added directly to model in blender instead
-                    /*if let Some(upper_twist_bone) = upper_twist {
+                    if let Some(upper_twist_bone) = upper_twist {
                         // Find node index of upper twist bone
                         let upper_twist_node_idx = node_map.get(*upper_twist_bone).map(|i| *i).unwrap();
 
