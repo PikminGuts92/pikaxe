@@ -27,7 +27,7 @@ pub struct SceneHelper {
 
 #[derive(Default)]
 pub struct MiloAssets {
-    char_clip_samples: CharClipSamples,
+    char_clip_samples: Vec<CharClipSamples>,
 }
 
 impl GltfImporter2 {
@@ -186,35 +186,48 @@ impl GltfImporter2 {
                 .iter()
                 .filter_map(|b| match full_samples.get(b) {
                     Some(s) if s.pos.is_some() && s.quat.is_some() => None,
-                    Some(s) => {
-                        let (_name, node) = node_map.get(b).expect("Get bone node for one anim");
+                    s @ _ => { // Has 0 or some transformations
+                        let (name, node) = node_map.get(b).expect("Get bone node for one anim");
                         let ([tx, ty, tz], [rx, ry, rz, rw], [_sx, _sy, _sz]) =  node.transform().decomposed();
 
                         Some(CharBoneSample {
-                            symbol: s.symbol.to_owned(),
-                            pos: if s.pos.is_none() {
+                            symbol: name.to_string(),
+                            pos: if s.is_none_or(|s| s.pos.is_none()) {
                                 Some((1.0, vec![Vector3 { x: tx, y: ty, z: tz }]))
                             } else {
                                 None
                             },
-                            quat: if s.quat.is_none() {
+                            quat: if s.is_none_or(|s| s.quat.is_none()) {
                                 Some((1.0, vec![Quat { x: rx, y: ry, z: rz, w: rw }]))
                             } else {
                                 None
                             },
                             ..Default::default()
                         })
-                    },
-                    _ => None
+                    }
                 })
-                .collect();
+                .collect::<Vec<_>>();
 
             let mut clip = CharClipSamples {
                 one: CharBonesSamples {
+                    bones: one_samples
+                        .iter()
+                        .map(|s| CharBone {
+                            symbol: s.symbol.to_owned(),
+                            weight: 1.0,
+                        })
+                        .collect(),
                     samples: EncodedSamples::Uncompressed(one_samples),
                     ..Default::default()
                 },
                 full: CharBonesSamples {
+                    bones: full_samples
+                        .values()
+                        .map(|s| CharBone {
+                            symbol: s.symbol.to_owned(),
+                            weight: 1.0,
+                        })
+                        .collect(),
                     samples: EncodedSamples::Uncompressed(full_samples
                         .into_values()
                         .collect()),
@@ -223,7 +236,13 @@ impl GltfImporter2 {
                 ..Default::default()
             };
 
-            // Compress anim samples here? Re-compute char bones from sample names too
+            // Re-compute char bones from sample names
+            for sam in [&mut clip.one, &mut clip.full] {
+                sam.recompute_sizes();
+                sam.generate_bones_from_samples();
+            }
+
+            assets.char_clip_samples.push(clip);
         }
 
         assets

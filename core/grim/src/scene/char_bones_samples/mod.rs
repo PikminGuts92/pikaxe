@@ -7,7 +7,7 @@ use grim_macros::*;
 use grim_traits::scene::*;
 pub use io::*;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct CharBone {
     pub symbol: String, // Bone name + transform property ext
     pub weight: f32,
@@ -118,6 +118,38 @@ impl CharBonesSamples {
         }
 
         self.computed_flags = (self.computed_sizes.last().unwrap() + 0xF) & 0xFFFF_FFF0;
+    }
+
+    pub fn generate_bones_from_samples(&mut self) {
+        self.bones = match &self.samples {
+            EncodedSamples::Compressed(bones, _) => bones.to_vec(),
+            EncodedSamples::Uncompressed(samples) => {
+                let (pos, quat) = samples
+                    .iter()
+                    .fold((Vec::new(), Vec::new()), |(mut pos, mut quat), s| {
+                        if let Some((w, _)) = s.pos {
+                            pos.push(CharBone {
+                                symbol: format!("{}.pos", s.symbol),
+                                weight: w,
+                            });
+                        }
+
+                        if let Some((w, _)) = s.quat {
+                            quat.push(CharBone {
+                                symbol: format!("{}.quat", s.symbol),
+                                weight: w,
+                            });
+                        }
+
+                        (pos, quat)
+                    });
+
+                pos
+                    .into_iter()
+                    .chain(quat)
+                    .collect()
+            },
+        };
     }
 
     pub fn decode_samples(&self, sys_info: &SystemInfo) -> Vec<CharBoneSample> {
