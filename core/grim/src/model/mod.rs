@@ -181,6 +181,14 @@ pub(crate) fn path_as_string<'a, T: AsRef<Path>>(path: &'a T) -> &'a str {
         .unwrap()
 }
 
+pub(crate) fn deg_to_rad(deg: f32) -> f32 {
+    deg * std::f32::consts::PI / 180.
+}
+
+pub(crate) fn rad_to_deg(rad: f32) -> f32 {
+    rad * 180. / std::f32::consts::PI
+}
+
 #[pyfunction]
 #[cfg(feature = "python")]
 pub(crate) fn print_test() -> PyResult<()> {
