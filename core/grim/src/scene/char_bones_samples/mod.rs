@@ -7,6 +7,8 @@ use grim_macros::*;
 use grim_traits::scene::*;
 pub use io::*;
 
+const MAX_ROTATION_DEGREES: f32 = 1080.0; // 3 rotations
+
 #[derive(Debug, Clone, Default)]
 pub struct CharBone {
     pub symbol: String, // Bone name + transform property ext
@@ -276,7 +278,7 @@ impl CharBonesSamples {
                             },
                             s @ 2 => {
                                 // Read packed data
-                                let x = read_packed_f32([sample[i    ], sample[i + 1]]);
+                                let x = read_packed_f32([sample[i    ], sample[i + 1]]) * MAX_ROTATION_DEGREES;
 
                                 i += s as usize;
                                 x
@@ -309,6 +311,28 @@ impl CharBonesSamples {
                 bone.pos.as_ref().map(|(_, p)| p.len()).unwrap_or_default(),
                 bone.quat.as_ref().map(|(_, q)| q.len()).unwrap_or_default(),
                 bone.rotz.as_ref().map(|(_, r)| r.len()).unwrap_or_default()
+            );
+        }*/
+
+        /*for bone in bone_samples.iter() {
+            let Some((_, rotz)) = bone.rotz.as_ref() else {
+                continue;
+            };
+
+            let (min, max, sum) = rotz
+                .iter()
+                .fold(
+                    (1.0f32, -1.0f32, 0.0f32),
+                    |(min, max, sum), rotz| (min.min(*rotz), max.max(*rotz), sum + *rotz)
+                );
+
+            let avg = sum / rotz.len() as f32;
+
+            println!("{}: min = {}, max = {}, avg = {}",
+                &bone.symbol,
+                min,
+                max,
+                avg
             );
         }*/
 

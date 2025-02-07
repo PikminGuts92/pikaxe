@@ -2352,6 +2352,7 @@ impl GltfExporter {
                 // Combined rotations
                 let mut rotation_samples = (0..rotation_sample_count)
                     .map(|_| node_rotate)
+                    //.map(|_| na::UnitQuaternion::identity())
                     /*.map(|_| {
                         let q = rotation.as_vector();
                         na::Quaternion::new(q[3], q[0], q[1], q[2])
@@ -2382,6 +2383,22 @@ impl GltfExporter {
 
                 // Add rotations (.rotz)
                 if let Some((w, samples)) = bone.rotz.as_ref() {
+                    let m = self.get_transform(&bone_name)
+                        .unwrap()
+                        .get_local_xfm();
+
+                    let mat = na::Matrix4::new(
+                        // Column-major order...
+                        m.m11, m.m21, m.m31, m.m41,
+                        m.m12, m.m22, m.m32, m.m42,
+                        m.m13, m.m23, m.m33, m.m43,
+                        m.m14, m.m24, m.m34, m.m44
+                    );
+
+                    let (_, bone_rot, _) = decompose_trs(mat);
+                    let (roll, pitch, _yaw) = bone_rot.euler_angles();
+                    //let base_rot = na::UnitQuaternion::from_euler_angles(0.0, eu_y, eu_z); // roll (z), pitch (x), yaw (y)
+
                     for (i, z) in samples.into_iter().enumerate() {
                         let rot =  &mut rotation_samples[i];
 
@@ -2390,7 +2407,16 @@ impl GltfExporter {
                             std::f32::consts::PI * (z * w)
                         );
 
-                        *rot *= q;
+                        //let (q_x, q_y, q_z) = q.euler_angles();
+                        //println!("roll = {}, pitch = {}, yaw = {}", q_x, q_y, q_z);
+
+                        //*rot = base_rot * q;
+
+                        let z_rad = super::deg_to_rad(*z) * w;
+                        //*rot = na::UnitQuaternion::from_euler_angles(roll, pitch, -z);
+
+                        let (roll, pitch, _yaw) = rot.euler_angles();
+                        *rot = na::UnitQuaternion::from_euler_angles(0.0, 0.0, z_rad);
                     }
                 }
 
@@ -2438,7 +2464,8 @@ impl GltfExporter {
                         .find(|(upper_arm, _)| upper_arm.eq(&bone_name))
                         .map(|(_, upper_twist)| upper_twist);
 
-                    if let Some(upper_twist_bone) = upper_twist {
+                    // Constraints should be added directly to model in blender instead
+                    /*if let Some(upper_twist_bone) = upper_twist {
                         // Find node index of upper twist bone
                         let upper_twist_node_idx = node_map.get(*upper_twist_bone).map(|i| *i).unwrap();
 
@@ -2475,7 +2502,7 @@ impl GltfExporter {
                             extensions: None,
                             extras: Default::default()
                         });
-                    }
+                    }*/
                 }
 
                 // Add scales (.scale)
