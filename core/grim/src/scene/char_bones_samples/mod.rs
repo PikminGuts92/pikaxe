@@ -341,6 +341,20 @@ impl CharBonesSamples {
 
         bone_samples
     }
+
+    pub(crate) fn get_sample_count(&self) -> usize {
+        match &self.samples {
+            EncodedSamples::Compressed(_, raw_samples) => raw_samples.len(),
+            EncodedSamples::Uncompressed(samples) => samples
+                .iter()
+                .fold(0, |acc, s| {
+                    acc
+                        .max(s.pos.as_ref().map(|(_, p)| p.len()).unwrap_or_default())
+                        .max(s.quat.as_ref().map(|(_, q)| q.len()).unwrap_or_default())
+                        .max(s.rotz.as_ref().map(|(_, r)| r.len()).unwrap_or_default())
+                }),
+        }
+    }
 }
 
 #[cfg(test)]

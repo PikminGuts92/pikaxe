@@ -179,20 +179,7 @@ pub(crate) fn save_char_bones_samples_header(char_bones_samples: &CharBonesSampl
     }
 
     writer.write_uint32(char_bones_samples.compression)?;
-
-    let sample_count = match &char_bones_samples.samples {
-        EncodedSamples::Compressed(_, raw_samples) => raw_samples.len(),
-        EncodedSamples::Uncompressed(samples) => samples
-            .iter()
-            .fold(0, |acc, s| {
-                acc
-                    .max(s.pos.as_ref().map(|(_, p)| p.len()).unwrap_or_default())
-                    .max(s.quat.as_ref().map(|(_, q)| q.len()).unwrap_or_default())
-                    .max(s.rotz.as_ref().map(|(_, r)| r.len()).unwrap_or_default())
-            }),
-    };
-
-    writer.write_uint32(sample_count as u32)?;
+    writer.write_uint32(char_bones_samples.get_sample_count() as u32)?;
 
     // No frames for v11
 

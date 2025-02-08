@@ -329,6 +329,11 @@ impl GltfImporter2 {
 
             let mut clip = CharClipSamples {
                 name: anim_name,
+                start_beat: 0.0,
+                end_beat: 0.0,
+                beats_per_sec: 2.5, // Match UI anims
+                play_flags: 512, // kPlayRealTime
+                blend_width: 1.0, // Match UI anims
                 one: CharBonesSamples {
                     compression: 2,
                     samples: EncodedSamples::Uncompressed(one_samples),
@@ -343,6 +348,10 @@ impl GltfImporter2 {
                 },
                 ..Default::default()
             };
+
+            // Update end time
+            let sample_count = clip.full.get_sample_count().max(1); // Assume at least one sample because of one anims
+            clip.end_beat = (sample_count as f32 / 30.0) * clip.beats_per_sec;
 
             // Re-compute char bones from sample names
             for sam in [&mut clip.one, &mut clip.full] {
