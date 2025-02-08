@@ -1,7 +1,6 @@
 {
     "rust-analyzer.cargo.features": [
         "audio",
-        "experimental",
         "midi",
         "model",
         "python"
