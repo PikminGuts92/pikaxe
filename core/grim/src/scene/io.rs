@@ -259,6 +259,16 @@ pub (crate) fn save_vector3(vector: &Vector3, writer: &mut Box<BinaryStream>) ->
     Ok(())
 }
 
+pub (crate) fn save_vector3_packed(vector: &Vector3, writer: &mut Box<BinaryStream>) -> Result<(), Box<dyn Error>> {
+    for v in [vector.x, vector.y, vector.z] {
+        // Convert to signed short and write
+        let s = ((v / 1345.) * 32767.0).round() as i16;
+        writer.write_int16(s)?;
+    }
+
+    Ok(())
+}
+
 pub (crate) fn load_quat(quat: &mut Quat, reader: &mut Box<BinaryStream>) -> Result<(), Box<dyn Error>> {
     quat.x = reader.read_float32()?;
     quat.y = reader.read_float32()?;
