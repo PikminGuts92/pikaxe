@@ -75,6 +75,14 @@ pub struct Vector3 {
     pub z: f32,
 }
 
+impl PartialEq for Vector3 {
+    fn eq(&self, other: &Self) -> bool {
+        are_floats_equal(self.x, other.x)
+            && are_floats_equal(self.y, other.y)
+            && are_floats_equal(self.z, other.z)
+    }
+}
+
 #[derive(Debug, Default)]
 pub struct Vector4 {
     pub x: f32,
@@ -83,7 +91,7 @@ pub struct Vector4 {
     pub w: f32,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Quat {
     pub x: f32,
     pub y: f32,
@@ -94,6 +102,15 @@ pub struct Quat {
 impl Default for Quat {
     fn default() -> Self {
         Self { x: 0.0, y: 0.0, z: 0.0, w: 1.0 }
+    }
+}
+
+impl PartialEq for Quat {
+    fn eq(&self, other: &Self) -> bool {
+        are_floats_equal(self.x, other.x)
+            && are_floats_equal(self.y, other.y)
+            && are_floats_equal(self.z, other.z)
+            && are_floats_equal(self.w, other.w)
     }
 }
 
@@ -179,4 +196,8 @@ impl Default for Matrix3 {
     fn default() -> Matrix3 {
         Matrix3::identity()
     }
+}
+
+fn are_floats_equal(a: f32, b: f32) -> bool {
+    (a - b).abs() < f32::EPSILON
 }

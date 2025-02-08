@@ -125,6 +125,7 @@ impl GltfImporter2 {
 
             // Look for translate, rotate, and scale events
             let mut full_samples = HashMap::new();
+            let mut static_samples: HashMap<usize, (Option<Vector3>, Option<Quat>, Option<f32>)> = HashMap::new();
 
             for (node_idx, channels) in group_channels {
                 // Ignore if node doesn't have associated name
@@ -161,11 +162,23 @@ impl GltfImporter2 {
                     //let inputs = reader.read_inputs().unwrap().collect::<Vec<_>>(); // Time input
 
                     let outputs = match reader.read_outputs() {
-                        Some(ReadOutputs::Translations(trans)) => trans.map(|[x, y, z]| Vector3 { x, y, z }).collect(),
+                        Some(ReadOutputs::Translations(trans)) => trans.map(|[x, y, z]| Vector3 { x, y, z }).collect::<Vec<_>>(),
                         _ => panic!("Unable to read translation animations for bone {target_name}"),
                     };
 
-                    sample.pos = Some((1.0, outputs))
+                    let first_pos = outputs[0].clone();
+                    let has_changes = outputs.iter().any(|o| !o.eq(&first_pos));
+
+                    if has_changes {
+                        sample.pos = Some((1.0, outputs));
+                    } else {
+                        static_samples
+                            .entry(node_idx)
+                            .and_modify(|(pos, _, _)| {
+                                *pos = Some(first_pos.clone());
+                            })
+                            .or_insert_with(|| (Some(first_pos), None, None));
+                    }
                 }
 
                 // Parse rotation animations
@@ -175,11 +188,23 @@ impl GltfImporter2 {
                     //let inputs = reader.read_inputs().unwrap().collect::<Vec<_>>(); // Time input
 
                     let outputs = match reader.read_outputs() {
-                        Some(ReadOutputs::Rotations(rots)) => rots.into_f32().map(|[x, y, z, w]| Quat { x, y, z, w }).collect(),
+                        Some(ReadOutputs::Rotations(rots)) => rots.into_f32().map(|[x, y, z, w]| Quat { x, y, z, w }).collect::<Vec<_>>(),
                         _ => panic!("Unable to read rotation animations for bone {target_name}"),
                     };
 
-                    sample.quat = Some((1.0, outputs))
+                    let first_quat = outputs[0].clone();
+                    let has_changes = outputs.iter().any(|o| !o.eq(&first_quat));
+
+                    if has_changes {
+                        sample.quat = Some((1.0, outputs));
+                    } else {
+                        static_samples
+                            .entry(node_idx)
+                            .and_modify(|(_, quat, _)| {
+                                *quat = Some(first_quat.clone());
+                            })
+                            .or_insert_with(|| (None, Some(first_quat), None));
+                    }
                 }
 
                 // Parse scale animations
@@ -196,35 +221,54 @@ impl GltfImporter2 {
                     //sample.scale = Some((1.0, outputs))
                 }*/
 
-                full_samples.insert(node_idx, sample);
+                if sample.pos.is_some() || sample.quat.is_some() || sample.rotz.is_some() {
+                    full_samples.insert(node_idx, sample);
+                }
             }
 
             // Compute one samples
             // Find any bone transformation w/o animation and default to rest position
             let one_samples = bone_ids
                 .iter()
-                .filter_map(|b| match full_samples.get(b) {
+                .filter_map(|b| -> Option<CharBoneSample> {match full_samples.get(b) {
                     Some(s) if s.pos.is_some() && s.quat.is_some() => None,
                     s @ _ => { // Has 0 or some transformations
                         let (name, node) = node_map.get(b).expect("Get bone node for one anim");
-                        let ([tx, ty, tz], [rx, ry, rz, rw], [_sx, _sy, _sz]) =  node.transform().decomposed();
+                        let ([tx, ty, tz], [rx, ry, rz, rw], [_sx, _sy, _sz]) = node.transform().decomposed();
+
+                        let (static_pos, static_quat, _static_rotz) = {
+                            let static_sample = static_samples.remove(b);
+
+                            // Ugh... can't chain with as_mut()
+                            let static_pos = static_sample.as_ref().and_then(|(p, _, _)| p.clone());
+                            let static_quat = static_sample.as_ref().and_then(|(_, q, _)| q.clone());
+                            let static_rotz = static_sample.as_ref().and_then(|(_, _, r)| r.clone());
+
+                            (static_pos, static_quat, static_rotz)
+                        };
 
                         Some(CharBoneSample {
                             symbol: name.to_string(),
-                            pos: if s.is_none_or(|s| s.pos.is_none()) {
+                            pos: static_pos.map_or_else(
+                                || s.is_none_or(|s| s.pos.is_none()).then(|| (1.0, vec![Vector3 { x: tx, y: ty, z: tz }])),
+                                |p| Some((1.0, vec![p]))),
+                            /*pos: if s.is_none_or(|s| s.pos.is_none()) {
                                 Some((1.0, vec![Vector3 { x: tx, y: ty, z: tz }]))
                             } else {
                                 None
-                            },
-                            quat: if s.is_none_or(|s| s.quat.is_none()) {
+                            },*/
+                            quat: static_quat.map_or_else(
+                                || s.is_none_or(|s| s.quat.is_none()).then(|| (1.0, vec![Quat { x: rx, y: ry, z: rz, w: rw }])),
+                                |q| Some((1.0, vec![q]))),
+                            /*quat: if s.is_none_or(|s| s.quat.is_none()) {
                                 Some((1.0, vec![Quat { x: rx, y: ry, z: rz, w: rw }]))
                             } else {
                                 None
-                            },
+                            },*/
                             ..Default::default()
                         })
                     }
-                })
+                }})
                 .collect();
 
             let mut clip = CharClipSamples {
