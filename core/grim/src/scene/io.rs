@@ -276,3 +276,13 @@ pub (crate) fn save_quat(quat: &Quat, writer: &mut Box<BinaryStream>) -> Result<
 
     Ok(())
 }
+
+pub (crate) fn save_quat_packed(quat: &Quat, writer: &mut Box<BinaryStream>) -> Result<(), Box<dyn Error>> {
+    for v in [quat.x, quat.y, quat.z, quat.w] {
+        // Convert to signed short and write
+        let s = (v * 32767.0).round() as i16;
+        writer.write_int16(s)?;
+    }
+
+    Ok(())
+}

@@ -207,6 +207,12 @@ pub(crate) fn save_char_bones_samples_data(char_bones_samples: &CharBonesSamples
     let empty_vector3 = Vector3::default();
     let empty_quat = Quat::default();
 
+    let write_quat = if char_bones_samples.compression == 0 {
+        save_quat
+    } else {
+        save_quat_packed
+    };
+
     let (sample_count, pos_samples, quat_samples, rotz_samples) = samples
         .iter()
         .fold((0, Vec::new(), Vec::new(), Vec::new()), |(mut sample_count, mut pos_samples, mut quat_samples, mut rotz_samples), s| {
@@ -247,9 +253,9 @@ pub(crate) fn save_char_bones_samples_data(char_bones_samples: &CharBonesSamples
                 .or_else(|| quat.last());
 
             if let Some(sample) = sample {
-                save_quat(sample, writer)?;
+                write_quat(sample, writer)?;
             } else {
-                save_quat(&empty_quat, writer)?;
+                write_quat(&empty_quat, writer)?;
             }
         }
 

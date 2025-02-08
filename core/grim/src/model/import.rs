@@ -230,10 +230,12 @@ impl GltfImporter2 {
             let mut clip = CharClipSamples {
                 name: anim_name,
                 one: CharBonesSamples {
+                    compression: 1,
                     samples: EncodedSamples::Uncompressed(one_samples),
                     ..Default::default()
                 },
                 full: CharBonesSamples {
+                    compression: 1,
                     samples: EncodedSamples::Uncompressed(full_samples
                         .into_values()
                         .collect()),
