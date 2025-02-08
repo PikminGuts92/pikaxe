@@ -175,7 +175,7 @@ pub(crate) fn save_char_bones_samples_header(char_bones_samples: &CharBonesSampl
             .map(|o| *o)
             .unwrap_or_else(|| counts.last().map(|o| *o).unwrap());
 
-        writer.write_uint32(count_value);
+        writer.write_uint32(count_value)?;
     }
 
     writer.write_uint32(char_bones_samples.compression)?;
