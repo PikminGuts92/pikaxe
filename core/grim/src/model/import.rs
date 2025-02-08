@@ -167,7 +167,7 @@ impl GltfImporter2 {
                     };
 
                     let first_pos = outputs[0].clone();
-                    let has_changes = outputs.iter().any(|o| !o.eq(&first_pos));
+                    let has_changes = outputs.iter().skip(1).any(|o| !o.eq(&first_pos));
 
                     if has_changes {
                         sample.pos = Some((1.0, outputs));
@@ -193,7 +193,7 @@ impl GltfImporter2 {
                     };
 
                     let first_quat = outputs[0].clone();
-                    let has_changes = outputs.iter().any(|o| !o.eq(&first_quat));
+                    let has_changes = outputs.iter().skip(1).any(|o| !o.eq(&first_quat));
 
                     if has_changes {
                         sample.quat = Some((1.0, outputs));
