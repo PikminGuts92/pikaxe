@@ -9,6 +9,7 @@ use gltf::mesh::util::*;
 use gltf::json::extensions::scene::*;
 use gltf::json::extensions::mesh::*;
 use gltf::scene::Node;
+use crate::SystemInfo;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
@@ -28,6 +29,23 @@ pub struct SceneHelper {
 #[derive(Default)]
 pub struct MiloAssets {
     char_clip_samples: Vec<CharClipSamples>,
+}
+
+impl MiloAssets {
+    pub fn dump_to_directory<T>(&self, out_dir: T, info: &SystemInfo) -> Result<(), Box<dyn std::error::Error>> where T: AsRef<Path> {
+        // Create output dir
+        super::create_dir_if_not_exists(&out_dir)?;
+
+        for char_clip in self.char_clip_samples.iter() {
+            let char_clip_dir = out_dir.as_ref().join("CharClipSamples");
+            super::create_dir_if_not_exists(&char_clip_dir)?;
+
+            let char_clip_path = char_clip_dir.join(&char_clip.name);
+            save_to_file(char_clip, &char_clip_path, info)?;
+        }
+
+        Ok(())
+    }
 }
 
 impl GltfImporter2 {
