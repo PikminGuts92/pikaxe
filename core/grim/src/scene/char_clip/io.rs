@@ -139,3 +139,48 @@ pub(crate) fn load_char_clip<T: CharClip>(char_clip: &mut T, reader: &mut Box<Bi
 
     Ok(())
 }
+
+pub(crate) fn save_char_clip<T: CharClip>(char_clip: &T, writer: &mut Box<BinaryStream>, info: &SystemInfo, write_meta: bool) -> Result<(), Box<dyn Error>> {
+    let version = 5;
+    writer.write_uint32(version)?;
+
+    if write_meta {
+        save_object(char_clip, writer, info)?;
+    }
+
+    writer.write_float32(char_clip.get_start_beat())?;
+    writer.write_float32(char_clip.get_end_beat())?;
+    writer.write_float32(char_clip.get_beats_per_sec())?;
+
+    writer.write_uint32(char_clip.get_flags())?;
+    writer.write_uint32(char_clip.get_play_flags())?;
+
+    writer.write_float32(char_clip.get_blend_width())?;
+    writer.write_float32(char_clip.get_range())?;
+
+    writer.write_boolean(false)?; // Unknown bool, always false
+
+    // Write nodes
+    writer.write_uint32(char_clip.get_nodes().len() as u32)?;
+    for node in char_clip.get_nodes() {
+        writer.write_prefixed_string(&node.name)?;
+        writer.write_uint32(node.values.len() as u32)?;
+
+        for value in node.values.iter() {
+            writer.write_float32(value.frame)?;
+            writer.write_float32(value.weight)?;
+        }
+    }
+
+    // Writes empty data for deprecated enter/exit events
+    writer.write_uint64(0)?;
+
+    // Write events
+    writer.write_uint32(char_clip.get_events().len() as u32)?;
+    for event in char_clip.get_events() {
+        writer.write_float32(event.frame)?;
+        writer.write_prefixed_string(&event.script)?;
+    }
+
+    Ok(())
+}

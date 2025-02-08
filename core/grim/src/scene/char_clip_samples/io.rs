@@ -77,7 +77,25 @@ impl ObjectReadWrite for CharClipSamples {
         Ok(())
     }
 
-    fn save(&self, _stream: &mut dyn Stream, _info: &SystemInfo) -> Result<(), Box<dyn Error>> {
-        todo!()
+    fn save(&self, stream: &mut dyn Stream, info: &SystemInfo) -> Result<(), Box<dyn Error>> {
+        let version = 11; // TODO: Get version from system info
+
+        let mut stream = Box::new(BinaryStream::from_stream_with_endian(stream, info.endian));
+
+        stream.write_uint32(version)?;
+        save_char_clip(self, &mut stream, info, true)?;
+
+        save_char_bones_samples_header(&self.full, &mut stream, version)?;
+        save_char_bones_samples_header(&self.one, &mut stream, version)?;
+
+        // Write ignored data
+        // TODO: Convert to static object
+        save_char_bones_samples_header(&Default::default(), &mut stream, version)?;
+
+        save_char_bones_samples_data(&self.full, &mut stream, version)?;
+        save_char_bones_samples_data(&self.one, &mut stream, version)?;
+
+        //todo!()
+        Ok(())
     }
 }

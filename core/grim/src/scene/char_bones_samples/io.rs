@@ -3,6 +3,7 @@ use crate::scene::*;
 use crate::SystemInfo;
 use grim_traits::scene::*;
 use thiserror::Error as ThisError;
+use std::collections::HashMap;
 use std::error::Error;
 
 #[derive(Debug, ThisError)]
@@ -18,6 +19,27 @@ fn is_version_supported(version: u32) -> bool {
         16 => true, // TBRB/GDRB
          _ => false
     }
+}
+
+fn compute_counts(char_bone_samples: &CharBonesSamples) -> [u32; 7] {
+    let mut counts = [0u32; 7];
+
+    let trans_counts = char_bone_samples
+        .bones
+        .iter()
+        .fold([0u32; 7], |mut sizes, b| {
+            let idx = CharBonesSamples::get_type_of(&b.symbol);
+            sizes[idx as usize] += 1;
+            sizes
+        });
+
+    let mut current_count = 0;
+    for i in 0..counts.len() {
+        counts[i] = current_count;
+        current_count += trans_counts[i];
+    }
+
+    counts
 }
 
 pub(crate) fn load_char_bones_samples(char_bones_samples: &mut CharBonesSamples, reader: &mut Box<BinaryStream>, _info: &SystemInfo) -> Result<(), Box<dyn Error>> {
@@ -125,6 +147,125 @@ pub(crate) fn load_char_bones_samples_data(char_bones_samples: &mut CharBonesSam
         bones.into_iter().map(|(s, w)| CharBone { symbol: s, weight: w }).collect(),
         samples
     );
+
+    Ok(())
+}
+
+pub(crate) fn save_char_bones_samples_header(char_bones_samples: &CharBonesSamples, writer: &mut Box<BinaryStream>, version: u32) -> Result<(), Box<dyn Error>> {
+    // Earlier versions use 10 counts. Though the extra values can be ignored.
+    let count_size = if version > 15 { 7 } else { 10 };
+
+    // Write bones
+    writer.write_uint32(char_bones_samples.bones.len() as u32)?;
+    for bone in char_bones_samples.bones.iter() {
+        // Read symbol + weight values
+        // Note: Pre-RB games don't use weighted bones so skip for PS2 GH2
+
+        writer.write_prefixed_string(&bone.symbol)?;
+        if version >= 11 {
+            writer.write_float32(bone.weight)?;
+        }
+    }
+
+    // Write offset values
+    let counts = compute_counts(char_bones_samples);
+    for i in 0..count_size {
+        let count_value = counts
+            .get(i)
+            .map(|o| *o)
+            .unwrap_or_else(|| counts.last().map(|o| *o).unwrap());
+
+        writer.write_uint32(count_value);
+    }
+
+    writer.write_uint32(char_bones_samples.compression)?;
+
+    let sample_count = match &char_bones_samples.samples {
+        EncodedSamples::Compressed(_, raw_samples) => raw_samples.len(),
+        EncodedSamples::Uncompressed(samples) => samples
+            .iter()
+            .fold(0, |acc, s| {
+                acc
+                    .max(s.pos.as_ref().map(|(_, p)| p.len()).unwrap_or_default())
+                    .max(s.quat.as_ref().map(|(_, q)| q.len()).unwrap_or_default())
+                    .max(s.rotz.as_ref().map(|(_, r)| r.len()).unwrap_or_default())
+            }),
+    };
+
+    writer.write_uint32(sample_count as u32)?;
+
+    // No frames for v11
+
+    Ok(())
+}
+
+pub(crate) fn save_char_bones_samples_data(char_bones_samples: &CharBonesSamples, writer: &mut Box<BinaryStream>, version: u32) -> Result<(), Box<dyn Error>> {
+    let EncodedSamples::Uncompressed(samples) = &char_bones_samples.samples else {
+        unimplemented!("Unable to write uncompressed samples")
+    };
+
+    let empty_vector3 = Vector3::default();
+    let empty_quat = Quat::default();
+
+    let (sample_count, pos_samples, quat_samples, rotz_samples) = samples
+        .iter()
+        .fold((0, Vec::new(), Vec::new(), Vec::new()), |(mut sample_count, mut pos_samples, mut quat_samples, mut rotz_samples), s| {
+            if let Some((_, p)) = &s.pos {
+                sample_count = sample_count.max(p.len());
+                pos_samples.push(p);
+            }
+            if let Some((_, q)) = &s.quat {
+                sample_count = sample_count.max(q.len());
+                quat_samples.push(q);
+            }
+            if let Some((_, rz)) = &s.rotz {
+                sample_count = sample_count.max(rz.len());
+                rotz_samples.push(rz);
+            }
+
+            (sample_count, pos_samples, quat_samples, rotz_samples)
+        });
+
+    for i in 0..sample_count {
+        // Write positions
+        for pos in pos_samples.iter() {
+            let sample = pos
+                .get(i)
+                .or_else(|| pos.last());
+
+            if let Some(sample) = sample {
+                save_vector3(sample, writer)?;
+            } else {
+                save_vector3(&empty_vector3, writer)?;
+            }
+        }
+
+        // Write quaternions
+        for quat in quat_samples.iter() {
+            let sample = quat
+                .get(i)
+                .or_else(|| quat.last());
+
+            if let Some(sample) = sample {
+                save_quat(sample, writer)?;
+            } else {
+                save_quat(&empty_quat, writer)?;
+            }
+        }
+
+        // Write z-rotations
+        for rotz in rotz_samples.iter() {
+            let sample = rotz
+                .get(i)
+                .or_else(|| rotz.last());
+
+            if let Some(sample) = sample {
+                writer.write_float32(*sample)?;
+            } else {
+                writer.write_float32(0.0)?;
+            }
+        }
+    }
 
     Ok(())
 }

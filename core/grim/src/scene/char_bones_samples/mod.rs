@@ -88,7 +88,7 @@ impl CharBonesSamples {
         return 8;
     }
 
-    pub fn get_type_size2(&self, idx: u32) -> usize {
+    pub(crate) fn get_type_size2(&self, idx: u32) -> usize {
         // Note: Not sure if scale ever gets compressed
         const SIZES: [[usize; 6]; 4] = [
         //    p  s   q  x  y  z
