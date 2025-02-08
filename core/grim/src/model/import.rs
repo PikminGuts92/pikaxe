@@ -13,6 +13,10 @@ use crate::SystemInfo;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
+const IGNORED_BONES: [&str; 1] = [
+    "bone_pos_guitar.mesh",
+];
+
 pub struct GltfImporter2 {
     source_path: PathBuf,
     document: Document,
@@ -29,6 +33,43 @@ pub struct SceneHelper {
 #[derive(Default)]
 pub struct MiloAssets {
     char_clip_samples: Vec<CharClipSamples>,
+}
+
+fn find_chidren_of_ignored_bones(node: &Node<'_>, ignored: &[&str], is_ignored: bool) -> Vec<usize> {
+    if is_ignored {
+        let mut descendents = node
+            .children()
+            .flat_map(|c| {
+                let mut descendents = find_chidren_of_ignored_bones(&c, ignored, true);
+
+                descendents.insert(0, c.index());
+                descendents
+            })
+            .collect::<Vec<_>>();
+
+        descendents.insert(0, node.index());
+        return descendents
+    }
+
+    let should_ignore = IGNORED_BONES
+        .iter()
+        .any(|b| node.name().is_some_and(|n| n.eq(*b)));
+
+    let mut descendents = node
+        .children()
+        .flat_map(|c| {
+            let descendents = find_chidren_of_ignored_bones(&c, ignored, should_ignore);
+
+            //descendents.insert(0, c.index());
+            descendents
+        })
+        .collect::<Vec<_>>();
+
+    if should_ignore {
+        descendents.insert(0, node.index());
+    }
+
+    descendents
 }
 
 impl MiloAssets {
@@ -79,6 +120,20 @@ impl GltfImporter2 {
         // Need to look at skins and find bones
         // If bones have no anim events, add to "one" clips
 
+        let ignored_nodes = self
+            .document
+            .default_scene().unwrap()
+            .nodes()
+            .filter(|n| n.name().is_some())
+            .flat_map(|n| find_chidren_of_ignored_bones(
+                &n,
+                &IGNORED_BONES,
+                IGNORED_BONES
+                    .iter()
+                    .any(|b| n.name().unwrap().eq(*b)))
+            )
+            .collect::<HashSet<_>>();
+
         // TODO: Compute global matrix of each bone node for use in converting local gltf space to milo space
         // TODO: Allow char clips for non-bones (i.e. bone_door in gh2)
         // Just get bones for first skin
@@ -88,6 +143,7 @@ impl GltfImporter2 {
             .map(|s| s
                 .joints()
                 .map(|j| j.index())
+                .filter(|j| !ignored_nodes.contains(j))
                 .collect::<HashSet<_>>())
             .next()
             .unwrap_or_else(|| HashSet::new());
