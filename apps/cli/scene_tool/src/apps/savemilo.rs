@@ -88,23 +88,14 @@ impl SubApp for SaveMiloApp {
         // Uncompress animations
         for obj in obj_dir.get_entries_mut() {
             if let Object::CharClipSamples(ccs) = obj {
-                println!("Name: {}", &ccs.name);
-
                 for cbs in [&mut ccs.one, &mut ccs.full] {
-                    match &cbs.samples {
-                        EncodedSamples::Compressed(bones, samples) => {
-                            println!("\tStart: {} bones, {} samples", bones.len(), samples.len());
-                        },
-                        _ => {}
-                    }
-
                     let samples = cbs.decode_samples(&in_sys_info);
-                    println!("\tDecoded: {} samples", samples.len());
-
                     cbs.samples = EncodedSamples::Uncompressed(samples);
 
                     cbs.generate_bones_from_samples();
                     cbs.recompute_sizes();
+
+                    cbs.compression = 1; // Best compatibility
                 }
             }
         }
