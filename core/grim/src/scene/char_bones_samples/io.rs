@@ -1,4 +1,5 @@
 use crate::io::{BinaryStream, SeekFrom, Stream};
+use crate::model::deg_to_rad;
 use crate::scene::*;
 use crate::SystemInfo;
 use grim_traits::scene::*;
@@ -290,7 +291,7 @@ pub(crate) fn save_char_bones_samples_data(char_bones_samples: &CharBonesSamples
 }
 
 fn save_rot(value: f32, writer: &mut Box<BinaryStream>) -> Result<(), Box<dyn Error>> {
-    writer.write_float32(value)
+    writer.write_float32(deg_to_rad(value))
 }
 
 fn save_rot_packed(value: f32, writer: &mut Box<BinaryStream>) -> Result<(), Box<dyn Error>> {
