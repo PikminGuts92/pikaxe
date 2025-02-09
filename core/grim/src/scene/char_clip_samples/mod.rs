@@ -4,7 +4,7 @@ use grim_macros::*;
 use grim_traits::scene::*;
 pub use io::*;
 
-use super::{CharBone, CharBonesSamples};
+use super::{CharBone4Bone, CharBonesSamples};
 
 #[milo]
 pub struct CharClipSamples {
@@ -31,7 +31,7 @@ pub struct CharClipSamples {
     pub some_bool: bool,
     pub full: CharBonesSamples,
     pub one: CharBonesSamples,
-    pub bones: Vec<CharBone>,
+    pub bones: Vec<CharBone4Bone>,
 }
 
 impl Default for CharClipSamples {

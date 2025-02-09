@@ -10,7 +10,7 @@ pub use io::*;
 const MAX_ROTATION_DEGREES: f32 = 1080.0; // 3 rotations
 
 #[derive(Debug, Clone, Default)]
-pub struct CharBone {
+pub struct CharBone4Bone {
     pub symbol: String, // Bone name + transform property ext
     pub weight: f32,
 }
@@ -25,7 +25,7 @@ pub struct CharBoneSample {
 
 #[derive(Debug)]
 pub enum EncodedSamples {
-    Compressed(Vec<CharBone>, Vec<Box<[u8]>>), // Raw sample collection of bone transforms
+    Compressed(Vec<CharBone4Bone>, Vec<Box<[u8]>>), // Raw sample collection of bone transforms
     Uncompressed(Vec<CharBoneSample>) // Collections of samples grouped by bone transforms
 }
 
@@ -37,7 +37,7 @@ impl Default for EncodedSamples {
 
 #[derive(Debug, Default)]
 pub struct CharBonesSamples { // Sample set
-    pub bones: Vec<CharBone>,
+    pub bones: Vec<CharBone4Bone>,
     pub compression: u32, // TODO: Convert to enum?
     pub counts: [u32; 7], // Offsets
     pub computed_sizes: [u32; 7],
@@ -130,21 +130,21 @@ impl CharBonesSamples {
                     .iter()
                     .fold((Vec::new(), Vec::new(), Vec::new()), |(mut pos, mut quat, mut rotz), s| {
                         if let Some((w, _)) = s.pos {
-                            pos.push(CharBone {
+                            pos.push(CharBone4Bone {
                                 symbol: format!("{}.pos", s.symbol),
                                 weight: w,
                             });
                         }
 
                         if let Some((w, _)) = s.quat {
-                            quat.push(CharBone {
+                            quat.push(CharBone4Bone {
                                 symbol: format!("{}.quat", s.symbol),
                                 weight: w,
                             });
                         }
 
                         if let Some((w, _)) = s.rotz {
-                            rotz.push(CharBone {
+                            rotz.push(CharBone4Bone {
                                 symbol: format!("{}.rotz", s.symbol),
                                 weight: w,
                             });

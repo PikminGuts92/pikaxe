@@ -76,7 +76,7 @@ pub(crate) fn load_char_bones_samples_header(char_bones_samples: &mut CharBonesS
 
     char_bones_samples.bones = bones
         .iter()
-        .map(|(name, weight)| CharBone {
+        .map(|(name, weight)| CharBone4Bone {
             symbol: name.to_owned(),
             weight: *weight,
         })
@@ -152,7 +152,7 @@ pub(crate) fn load_char_bones_samples_data(char_bones_samples: &mut CharBonesSam
     }
 
     char_bones_samples.samples = EncodedSamples::Compressed(
-        bones.into_iter().map(|(s, w)| CharBone { symbol: s, weight: w }).collect(),
+        bones.into_iter().map(|(s, w)| CharBone4Bone { symbol: s, weight: w }).collect(),
         samples
     );
 
