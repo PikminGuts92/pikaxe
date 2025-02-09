@@ -1,4 +1,4 @@
-use crate::{SystemInfo};
+use crate::SystemInfo;
 use crate::io::MemoryStream;
 use crate::scene::*;
 
@@ -6,6 +6,7 @@ pub enum Object {
     Anim(AnimObject),
     BandPlacer(BandPlacer),
     Cam(CamObject),
+    CharBone(CharBone),
     CharClipSamples(CharClipSamples),
     CharHair(CharHair),
     CharLipSync(CharLipSync),
@@ -39,6 +40,7 @@ impl Object {
             Object::Anim(anim) => &anim.name,
             Object::BandPlacer(band_placer) => &band_placer.name,
             Object::Cam(cam) => &cam.name,
+            Object::CharBone(char_bone) => &char_bone.name,
             Object::CharClipSamples(ccs) => &ccs.name,
             Object::CharHair(ch) => &ch.name,
             Object::CharLipSync(cls) => &cls.name,
@@ -65,6 +67,7 @@ impl Object {
             Object::Anim(_) => "Anim",
             Object::BandPlacer(_) => "BandPlacer",
             Object::Cam(_) => "Cam",
+            Object::CharBone(_) => "CharBone",
             Object::CharClipSamples(_) => "CharClipSamples",
             Object::CharHair(_) => "CharHair",
             Object::CharLipSync(_) => "CharLipSync",

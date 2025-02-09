@@ -1,4 +1,5 @@
 mod anim;
+mod char_bone;
 mod char_clip;
 mod common;
 mod draw;
@@ -10,6 +11,7 @@ mod poll;
 mod trans;
 
 pub use anim::*;
+pub use char_bone::*;
 pub use char_clip::*;
 pub use common::*;
 pub use draw::*;
