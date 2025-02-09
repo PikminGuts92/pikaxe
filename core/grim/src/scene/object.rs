@@ -102,6 +102,7 @@ impl Object {
             Object::Anim(obj) => obj,
             Object::BandPlacer(obj) => obj,
             Object::Cam(obj) => obj,
+            Object::CharClipSamples(obj) => obj,
             Object::ColorPalette(obj) => obj,
             Object::CubeTex(obj) => obj,
             Object::Draw(obj) => obj,
@@ -114,7 +115,7 @@ impl Object {
             Object::Tex(obj) => obj,
             Object::Trans(obj) => obj,
             Object::TransAnim(obj) => obj,
-            _ => todo!("Test"),
+            _ => todo!("Can't pack \"{}\" yet!", self.get_type()),
         };
 
         let mut data = Vec::new();

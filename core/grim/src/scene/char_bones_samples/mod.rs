@@ -126,9 +126,9 @@ impl CharBonesSamples {
         self.bones = match &self.samples {
             EncodedSamples::Compressed(bones, _) => bones.to_vec(),
             EncodedSamples::Uncompressed(samples) => {
-                let (pos, quat) = samples
+                let (pos, quat, rotz) = samples
                     .iter()
-                    .fold((Vec::new(), Vec::new()), |(mut pos, mut quat), s| {
+                    .fold((Vec::new(), Vec::new(), Vec::new()), |(mut pos, mut quat, mut rotz), s| {
                         if let Some((w, _)) = s.pos {
                             pos.push(CharBone {
                                 symbol: format!("{}.pos", s.symbol),
@@ -143,12 +143,20 @@ impl CharBonesSamples {
                             });
                         }
 
-                        (pos, quat)
+                        if let Some((w, _)) = s.rotz {
+                            rotz.push(CharBone {
+                                symbol: format!("{}.rotz", s.symbol),
+                                weight: w,
+                            });
+                        }
+
+                        (pos, quat, rotz)
                     });
 
                 pos
                     .into_iter()
                     .chain(quat)
+                    .chain(rotz)
                     .collect()
             },
         };

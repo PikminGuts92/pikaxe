@@ -74,6 +74,14 @@ pub(crate) fn load_char_bones_samples_header(char_bones_samples: &mut CharBonesS
         bones.push((name, weight));
     }
 
+    char_bones_samples.bones = bones
+        .iter()
+        .map(|(name, weight)| CharBone {
+            symbol: name.to_owned(),
+            weight: *weight,
+        })
+        .collect();
+
     // Read offset values
     for i in 0..count_size {
         let v = reader.read_uint32()?;
@@ -187,8 +195,14 @@ pub(crate) fn save_char_bones_samples_header(char_bones_samples: &CharBonesSampl
 }
 
 pub(crate) fn save_char_bones_samples_data(char_bones_samples: &CharBonesSamples, writer: &mut Box<BinaryStream>, version: u32) -> Result<(), Box<dyn Error>> {
-    let EncodedSamples::Uncompressed(samples) = &char_bones_samples.samples else {
-        unimplemented!("Unable to write uncompressed samples")
+    let samples = match &char_bones_samples.samples {
+        EncodedSamples::Uncompressed(samples) => samples,
+        EncodedSamples::Compressed(_, raw_samples) => {
+            for raw_sample in raw_samples {
+                writer.write_bytes(raw_sample)?;
+            }
+            return Ok(());
+        }
     };
 
     let empty_vector3 = Vector3::default();
@@ -204,6 +218,12 @@ pub(crate) fn save_char_bones_samples_data(char_bones_samples: &CharBonesSamples
         save_quat
     } else {
         save_quat_packed
+    };
+
+    let write_rot = if char_bones_samples.compression == 0 {
+        save_rot
+    } else {
+        save_rot_packed
     };
 
     let (sample_count, pos_samples, quat_samples, rotz_samples) = samples
@@ -259,12 +279,22 @@ pub(crate) fn save_char_bones_samples_data(char_bones_samples: &CharBonesSamples
                 .or_else(|| rotz.last());
 
             if let Some(sample) = sample {
-                writer.write_float32(*sample)?;
+                write_rot(*sample, writer)?;
             } else {
-                writer.write_float32(0.0)?;
+                write_rot(0.0, writer)?;
             }
         }
     }
 
     Ok(())
+}
+
+fn save_rot(value: f32, writer: &mut Box<BinaryStream>) -> Result<(), Box<dyn Error>> {
+    writer.write_float32(value)
+}
+
+fn save_rot_packed(value: f32, writer: &mut Box<BinaryStream>) -> Result<(), Box<dyn Error>> {
+    // Convert to signed short and write
+    let s = ((value / 1080.) * 32767.0).round() as i16;
+    writer.write_int16(s)
 }

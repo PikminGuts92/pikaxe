@@ -8,7 +8,7 @@ use thiserror::Error;
 
 use grim::{Platform, SystemInfo};
 use grim::io::*;
-use grim::scene::{Object, ObjectDir, ObjectReadWrite, PackedObject, Tex};
+use grim::scene::{EncodedSamples, Object, ObjectDir, ObjectReadWrite, PackedObject, Tex};
 use grim::texture::{Bitmap, Image, swap_image_bytes, write_rgba_to_file};
 
 
@@ -85,6 +85,30 @@ impl SubApp for SaveMiloApp {
             convert_textures(&mut obj_dir, &in_sys_info, &out_sys_info);
         }
 
+        // Uncompress animations
+        for obj in obj_dir.get_entries_mut() {
+            if let Object::CharClipSamples(ccs) = obj {
+                println!("Name: {}", &ccs.name);
+
+                for cbs in [&mut ccs.one, &mut ccs.full] {
+                    match &cbs.samples {
+                        EncodedSamples::Compressed(bones, samples) => {
+                            println!("\tStart: {} bones, {} samples", bones.len(), samples.len());
+                        },
+                        _ => {}
+                    }
+
+                    let samples = cbs.decode_samples(&in_sys_info);
+                    println!("\tDecoded: {} samples", samples.len());
+
+                    cbs.samples = EncodedSamples::Uncompressed(samples);
+
+                    cbs.generate_bones_from_samples();
+                    cbs.recompute_sizes();
+                }
+            }
+        }
+
         if in_sys_info.version.ne(&out_sys_info.version) {
             println!("Converting milo version from {:?} to {:?}", in_sys_info.version, out_sys_info.version);
         }
@@ -112,6 +136,7 @@ fn unpack_entries(milo_dir: &mut ObjectDir, info: &SystemInfo, all: bool) {
     }
 
     let supported_types = [
+        "CharClipSamples",
         "CubeTex",
         "Group",
         "Mat",
