@@ -1,3 +1,5 @@
+use crate::SystemInfo;
+use crate::model::MILOSPACE_TO_GLSPACE;
 use crate::scene::*;
 use gltf::animation::util::ReadOutputs;
 use gltf::animation::Property;
@@ -9,12 +11,13 @@ use gltf::mesh::util::*;
 use gltf::json::extensions::scene::*;
 use gltf::json::extensions::mesh::*;
 use gltf::scene::Node;
-use crate::SystemInfo;
+use nalgebra as na;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
-const IGNORED_BONES: [&str; 1] = [
+const IGNORED_BONES: [&str; 2] = [
     "bone_pos_guitar.mesh",
+    "spot_ui.mesh",
 ];
 
 pub struct GltfImporter2 {
@@ -32,6 +35,7 @@ pub struct SceneHelper {
 
 #[derive(Default)]
 pub struct MiloAssets {
+    char_bones: Vec<CharBone>,
     char_clip_samples: Vec<CharClipSamples>,
 }
 
@@ -77,6 +81,16 @@ impl MiloAssets {
         // Create output dir
         super::create_dir_if_not_exists(&out_dir)?;
 
+        // Write char bones
+        for char_bone in self.char_bones.iter() {
+            let char_bone_dir = out_dir.as_ref().join("CharBone");
+            super::create_dir_if_not_exists(&char_bone_dir)?;
+
+            let char_bone_path = char_bone_dir.join(&char_bone.name);
+            save_to_file(char_bone, &char_bone_path, info)?;
+        }
+
+        // Write char clip samples
         for char_clip in self.char_clip_samples.iter() {
             let char_clip_dir = out_dir.as_ref().join("CharClipSamples");
             super::create_dir_if_not_exists(&char_clip_dir)?;
@@ -142,6 +156,7 @@ impl GltfImporter2 {
             .skins()
             .map(|s| s
                 .joints()
+                .filter(|j| j.children().any(|_| true)) // Ignore if missing children (causes issues for finger03 bones)
                 .map(|j| j.index())
                 .filter(|j| !ignored_nodes.contains(j))
                 .collect::<HashSet<_>>())
@@ -212,8 +227,12 @@ impl GltfImporter2 {
                 // TODO: Interpolate frames for non 30fps animations
                 // Will need to use time inputs for that
 
+                // Note: Only rotational transformations are support for bones except for root bone
+                // TODO: TODO: Remove hard-coded root bone value
+                let is_root = target_name.eq(&"bone_pelvis");
+
                 // Parse translation animations
-                if let Some(channel) = pos {
+                if let Some(channel) = pos.and_then(|p| is_root.then(|| p)) {
                     let reader = channel.reader(|buffer| Some(&self.buffers[buffer.index()]));
                     //let inputs = reader.read_inputs().unwrap().collect::<Vec<_>>(); // Time input
 
@@ -284,9 +303,9 @@ impl GltfImporter2 {
 
             // Compute one samples
             // Find any bone transformation w/o animation and default to rest position
-            let one_samples = bone_ids
+            let mut one_samples = bone_ids
                 .iter()
-                .filter_map(|b| -> Option<CharBoneSample> {match full_samples.get(b) {
+                .filter_map(|b| -> Option<CharBoneSample> { match full_samples.get(b) {
                     Some(s) if s.pos.is_some() && s.quat.is_some() => None,
                     s @ _ => { // Has 0 or some transformations
                         let (name, node) = node_map.get(b).expect("Get bone node for one anim");
@@ -305,9 +324,10 @@ impl GltfImporter2 {
 
                         Some(CharBoneSample {
                             symbol: name.to_string(),
-                            pos: static_pos.map_or_else(
+                            pos: None,
+                            /*pos: static_pos.map_or_else(
                                 || s.is_none_or(|s| s.pos.is_none()).then(|| (1.0, vec![Vector3 { x: tx, y: ty, z: tz }])),
-                                |p| Some((1.0, vec![p]))),
+                                |p| Some((1.0, vec![p]))),*/
                             /*pos: if s.is_none_or(|s| s.pos.is_none()) {
                                 Some((1.0, vec![Vector3 { x: tx, y: ty, z: tz }]))
                             } else {
@@ -325,7 +345,16 @@ impl GltfImporter2 {
                         })
                     }
                 }})
-                .collect();
+                .collect::<Vec<_>>();
+
+            let mut full_samples = full_samples
+                .into_values()
+                .collect::<Vec<_>>();
+
+            // Must be sorted!!!!
+            // TODO: Move to CCS io
+            full_samples.sort_by(|a, b| a.symbol.cmp(&b.symbol));
+            one_samples.sort_by(|a, b| a.symbol.cmp(&b.symbol));
 
             let mut clip = CharClipSamples {
                 name: anim_name,
@@ -335,22 +364,20 @@ impl GltfImporter2 {
                 play_flags: 512, // kPlayRealTime
                 blend_width: 1.0, // Match UI anims
                 one: CharBonesSamples {
-                    compression: 2,
+                    compression: 1,
                     samples: EncodedSamples::Uncompressed(one_samples),
                     ..Default::default()
                 },
                 full: CharBonesSamples {
-                    compression: 2,
-                    samples: EncodedSamples::Uncompressed(full_samples
-                        .into_values()
-                        .collect()),
+                    compression: 1,
+                    samples: EncodedSamples::Uncompressed(full_samples),
                     ..Default::default()
                 },
                 ..Default::default()
             };
 
             // Update end time
-            let sample_count = clip.full.get_sample_count().max(1); // Assume at least one sample because of one anims
+            let sample_count = clip.full.get_sample_count().checked_sub(1).unwrap_or_default().max(1); // Assume at least one sample because of one anims
             clip.end_beat = (sample_count as f32 / 30.0) * clip.beats_per_sec;
 
             // Re-compute char bones from sample names
@@ -362,7 +389,88 @@ impl GltfImporter2 {
             assets.char_clip_samples.push(clip);
         }
 
+        assets.char_bones = self.generate_char_bones();
+
         assets
+    }
+
+    fn generate_char_bones(&self)-> Vec<CharBone> {
+        let default_scene = self.document.default_scene().unwrap();
+
+        let mut bones = Vec::new();
+        for node in default_scene.nodes() {
+            let mut result_bones = self.process_char_bone_node(&node, None, MILOSPACE_TO_GLSPACE);
+            bones.append(&mut result_bones);
+        }
+
+        bones
+    }
+
+    fn process_char_bone_node(&self, node: &Node<'_>, parent_name: Option<&String>, parent_world_matrix: na::Matrix4<f32>) -> Vec<CharBone> {
+        let local_matrix = na::Matrix4::from(node.transform().matrix());
+        let world_matrix = parent_world_matrix * local_matrix;
+
+        // Check if node has name and part of bones
+        let mut bones = Vec::new();
+        let node_name = node.name().map(|n| format!("{}.trans", get_basename(n)));
+        let is_bone = node
+            .name()
+            .map(|n| n.ends_with(".mesh") // TODO: Case-insensitive compare
+                && node.mesh().is_none()
+            )
+            .unwrap_or_default();
+
+        if let Some(name) = node_name.as_ref().and_then(|n| is_bone.then(|| n)) {
+            bones.push(CharBone {
+                name: name.to_owned(),
+                local_xfm: na_matrix_to_milo_matrix(local_matrix),
+                world_xfm: na_matrix_to_milo_matrix(world_matrix),
+                parent: parent_name
+                    .map(|p| p.to_owned())
+                    .unwrap_or_default(),
+                ..Default::default()
+            });
+        }
+
+        let node_name = node_name.and_then(|n| is_bone.then(|| n)); // Only pass node name if bone
+        for child in node.children() {
+            let mut result_bones = self.process_char_bone_node(&child, node_name.as_ref(), world_matrix);
+            bones.append(&mut result_bones);
+        }
+
+        bones
+    }
+}
+
+fn na_matrix_to_milo_matrix(mat: na::Matrix4<f32>) -> Matrix {
+    let m = mat.as_slice();
+
+    /*Matrix {
+        // Row-major -> column-major
+        m11: m[0], m21: m[1], m31: m[2], m41: m[3],
+        m12: m[4], m22: m[5], m32: m[6], m42: m[7],
+
+        m13: m[ 8], m23: m[ 9], m33: m[10], m43: m[11],
+        m14: m[12], m24: m[13], m34: m[14], m44: m[15],
+    }*/
+
+    Matrix {
+        m11: m[ 0],
+        m12: m[ 1],
+        m13: m[ 2],
+        m14: m[ 3],
+        m21: m[ 4],
+        m22: m[ 5],
+        m23: m[ 6],
+        m24: m[ 7],
+        m31: m[ 8],
+        m32: m[ 9],
+        m33: m[10],
+        m34: m[11],
+        m41: m[12],
+        m42: m[13],
+        m43: m[14],
+        m44: m[15],
     }
 }
 
