@@ -19,6 +19,7 @@ pub struct CharBone4Bone {
 pub struct CharBoneSample {
     pub symbol: String, // Bone name
     pub pos: Option<(f32, Vec<Vector3>)>,
+    pub scale: Option<(f32, Vec<Vector3>)>,
     pub quat: Option<(f32, Vec<Quat>)>,
     pub rotz: Option<(f32, Vec<f32>)>,
 }
@@ -91,11 +92,11 @@ impl CharBonesSamples {
     pub(crate) fn get_type_size2(&self, idx: u32) -> usize {
         // Note: Not sure if scale ever gets compressed
         const SIZES: [[usize; 6]; 4] = [
-        //    p  s   q  x  y  z
-            [12, 4, 16, 4, 4, 4], // 0 Uncompressed
-            [12, 4,  8, 2, 2, 2], // 1 Compress rots
-            [ 6, 4,  8, 2, 2, 2], // 2 Compress vects
-            [ 6, 4,  4, 2, 2, 2], // 3 Compress quats
+        //    p  s    q  x  y  z
+            [12, 12, 16, 4, 4, 4], // 0 Uncompressed
+            [12, 12,  8, 2, 2, 2], // 1 Compress rots
+            [ 6,  6,  8, 2, 2, 2], // 2 Compress vects
+            [ 6,  6,  4, 2, 2, 2], // 3 Compress quats
         ];
 
         SIZES
@@ -126,12 +127,19 @@ impl CharBonesSamples {
         self.bones = match &self.samples {
             EncodedSamples::Compressed(bones, _) => bones.to_vec(),
             EncodedSamples::Uncompressed(samples) => {
-                let (pos, quat, rotz) = samples
+                let (pos, scale, quat, rotz) = samples
                     .iter()
-                    .fold((Vec::new(), Vec::new(), Vec::new()), |(mut pos, mut quat, mut rotz), s| {
+                    .fold((Vec::new(), Vec::new(), Vec::new(), Vec::new()), |(mut pos, mut scale, mut quat, mut rotz), s| {
                         if let Some((w, _)) = s.pos {
                             pos.push(CharBone4Bone {
                                 symbol: format!("{}.pos", s.symbol),
+                                weight: w,
+                            });
+                        }
+
+                        if let Some((w, _)) = s.scale {
+                            scale.push(CharBone4Bone {
+                                symbol: format!("{}.scale", s.symbol),
                                 weight: w,
                             });
                         }
@@ -150,11 +158,12 @@ impl CharBonesSamples {
                             });
                         }
 
-                        (pos, quat, rotz)
+                        (pos, scale, quat, rotz)
                     });
 
                 pos
                     .into_iter()
+                    .chain(scale)
                     .chain(quat)
                     .chain(rotz)
                     .collect()
@@ -194,6 +203,7 @@ impl CharBonesSamples {
                 // TODO: Make more efficient
                 let bone_name = bone.symbol.to_owned()
                     .replace(".pos", "")
+                    .replace(".scale", "")
                     .replace(".quat", "")
                     .replace(".rotz", "");
 
@@ -227,7 +237,7 @@ impl CharBonesSamples {
                                 i += s as usize;
                                 Vector3 { x, y, z }
                             },
-                            s @ _ => panic!("Unsupported .pos compression of type {}", s)
+                            s @ _ => panic!("Unsupported .pos compression of size {}", s)
                         };
 
                         // Insert or append pos sample
@@ -237,6 +247,39 @@ impl CharBonesSamples {
                                 Some((w, samples))
                             },
                             _ => Some((bone.weight, vec![pos]))
+                        }
+                    },
+                    t @ 1 => {
+                        // scale
+                        let scale = match self.get_type_size2(t) {
+                            s @ 12 => {
+                                // Read data
+                                let x = read_f32([sample[i    ], sample[i + 1], sample[i + 2], sample[i + 3]]);
+                                let y = read_f32([sample[i + 4], sample[i + 5], sample[i + 6], sample[i + 7]]);
+                                let z = read_f32([sample[i + 8], sample[i + 9], sample[i + 10], sample[i + 11]]);
+
+                                i += s as usize;
+                                Vector3 { x, y, z }
+                            },
+                            s @ 6 => {
+                                // Read packed data
+                                let x = read_packed_f32([sample[i    ], sample[i + 1]]) * 1345.; // TODO: Investigate better constant
+                                let y = read_packed_f32([sample[i + 2], sample[i + 3]]) * 1345.;
+                                let z = read_packed_f32([sample[i + 4], sample[i + 5]]) * 1345.;
+
+                                i += s as usize;
+                                Vector3 { x, y, z }
+                            },
+                            s @ _ => panic!("Unsupported .scale compression of size {}", s)
+                        };
+
+                        // Insert or append scale sample
+                        bone_sample.scale = match bone_sample.scale.take() {
+                            Some((w, mut samples)) => {
+                                samples.push(scale);
+                                Some((w, samples))
+                            },
+                            _ => Some((bone.weight, vec![scale]))
                         }
                     },
                     t @ 2 => {
@@ -262,7 +305,7 @@ impl CharBonesSamples {
                                 i += s as usize;
                                 Quat { x, y, z, w }
                             },
-                            s @ _ => panic!("Unsupported .pos compression of type {}", s)
+                            s @ _ => panic!("Unsupported .quat compression of size {}", s)
                         };
 
                         // Insert or append quat sample
@@ -291,7 +334,7 @@ impl CharBonesSamples {
                                 i += s as usize;
                                 x
                             },
-                            s @ _ => panic!("Unsupported .pos compression of type {}", s)
+                            s @ _ => panic!("Unsupported .rotz compression of size {}", s)
                         };
 
                         // Insert or append rotz sample
@@ -358,6 +401,7 @@ impl CharBonesSamples {
                 .fold(0, |acc, s| {
                     acc
                         .max(s.pos.as_ref().map(|(_, p)| p.len()).unwrap_or_default())
+                        .max(s.scale.as_ref().map(|(_, s)| s.len()).unwrap_or_default())
                         .max(s.quat.as_ref().map(|(_, q)| q.len()).unwrap_or_default())
                         .max(s.rotz.as_ref().map(|(_, r)| r.len()).unwrap_or_default())
                 }),

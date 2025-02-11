@@ -227,12 +227,16 @@ pub(crate) fn save_char_bones_samples_data(char_bones_samples: &CharBonesSamples
         save_rot_packed
     };
 
-    let (sample_count, pos_samples, quat_samples, rotz_samples) = samples
+    let (sample_count, pos_samples, scale_samples, quat_samples, rotz_samples) = samples
         .iter()
-        .fold((0, Vec::new(), Vec::new(), Vec::new()), |(mut sample_count, mut pos_samples, mut quat_samples, mut rotz_samples), s| {
+        .fold((0, Vec::new(), Vec::new(), Vec::new(), Vec::new()), |(mut sample_count, mut pos_samples, mut scale_samples, mut quat_samples, mut rotz_samples), s| {
             if let Some((_, p)) = &s.pos {
                 sample_count = sample_count.max(p.len());
                 pos_samples.push(p);
+            }
+            if let Some((_, s)) = &s.scale {
+                sample_count = sample_count.max(s.len());
+                scale_samples.push(s);
             }
             if let Some((_, q)) = &s.quat {
                 sample_count = sample_count.max(q.len());
@@ -243,7 +247,7 @@ pub(crate) fn save_char_bones_samples_data(char_bones_samples: &CharBonesSamples
                 rotz_samples.push(rz);
             }
 
-            (sample_count, pos_samples, quat_samples, rotz_samples)
+            (sample_count, pos_samples, scale_samples, quat_samples, rotz_samples)
         });
 
     for i in 0..sample_count {
@@ -252,6 +256,19 @@ pub(crate) fn save_char_bones_samples_data(char_bones_samples: &CharBonesSamples
             let sample = pos
                 .get(i)
                 .or_else(|| pos.last());
+
+            if let Some(sample) = sample {
+                write_vector(sample, writer)?;
+            } else {
+                write_vector(&empty_vector3, writer)?;
+            }
+        }
+
+        // Write scales (always packed)
+        for scale in scale_samples.iter() {
+            let sample = scale
+                .get(i)
+                .or_else(|| scale.last());
 
             if let Some(sample) = sample {
                 write_vector(sample, writer)?;
