@@ -78,24 +78,45 @@ impl ObjectReadWrite for CharClipSamples {
     }
 
     fn save(&self, stream: &mut dyn Stream, info: &SystemInfo) -> Result<(), Box<dyn Error>> {
-        let version = 11; // TODO: Get version from system info
+        // TODO: Get version from system info
+        let version = if !self.full.frames.is_empty() {
+            13 // Use newer version if it has frames
+        } else {
+            11
+        };
 
         let mut stream = Box::new(BinaryStream::from_stream_with_endian(stream, info.endian));
 
         stream.write_uint32(version)?;
         save_char_clip(self, &mut stream, info, true)?;
 
-        save_char_bones_samples_header(&self.full, &mut stream, version)?;
-        save_char_bones_samples_header(&self.one, &mut stream, version)?;
+        if version >= 16 {
+            stream.write_boolean(self.some_bool)?;
+        }
 
-        // Write ignored data
-        // TODO: Convert to static object
-        save_char_bones_samples_header(&Default::default(), &mut stream, version)?;
+        if version < 13 {
+            // Write as split parts (headers then data samples)
+            save_char_bones_samples_header(&self.full, &mut stream, version)?;
+            save_char_bones_samples_header(&self.one, &mut stream, version)?;
 
-        save_char_bones_samples_data(&self.full, &mut stream, version)?;
-        save_char_bones_samples_data(&self.one, &mut stream, version)?;
+            if version > 7 {
+                // Write ignored data
+                // Seems to always write sample count of full + compression 1 (ignored either way so it doesn't matter)
+                // TODO: Convert to static object
+                save_char_bones_samples_header(&Default::default(), &mut stream, version)?;
+            }
 
-        //todo!()
+            save_char_bones_samples_data(&self.full, &mut stream)?;
+            save_char_bones_samples_data(&self.one, &mut stream)?;
+        } else {
+            save_char_bones_samples(&self.full, &mut stream, version)?;
+            save_char_bones_samples(&self.one, &mut stream, version)?;
+        }
+
+        if version > 14 {
+            todo!("Writing of extra bone data not currently supported for v15 or above");
+        }
+
         Ok(())
     }
 }

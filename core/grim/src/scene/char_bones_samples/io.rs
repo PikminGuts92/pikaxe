@@ -160,6 +160,15 @@ pub(crate) fn load_char_bones_samples_data(char_bones_samples: &mut CharBonesSam
     Ok(())
 }
 
+pub(crate) fn save_char_bones_samples(char_bones_samples: &CharBonesSamples, writer: &mut Box<BinaryStream>, version: u32) -> Result<(), Box<dyn Error>> {
+    writer.write_uint32(version)?; // Write version again for later games
+
+    save_char_bones_samples_header(char_bones_samples, writer, version)?;
+    save_char_bones_samples_data(char_bones_samples, writer)?;
+
+    Ok(())
+}
+
 pub(crate) fn save_char_bones_samples_header(char_bones_samples: &CharBonesSamples, writer: &mut Box<BinaryStream>, version: u32) -> Result<(), Box<dyn Error>> {
     // Earlier versions use 10 counts. Though the extra values can be ignored.
     let count_size = if version > 15 { 7 } else { 10 };
@@ -190,12 +199,18 @@ pub(crate) fn save_char_bones_samples_header(char_bones_samples: &CharBonesSampl
     writer.write_uint32(char_bones_samples.compression)?;
     writer.write_uint32(char_bones_samples.get_sample_count() as u32)?;
 
-    // No frames for v11
+    // Write frames
+    if version > 11 {
+        writer.write_uint32(char_bones_samples.frames.len() as u32)?;
+        for frame in char_bones_samples.frames.iter() {
+            writer.write_float32(*frame)?;
+        }
+    }
 
     Ok(())
 }
 
-pub(crate) fn save_char_bones_samples_data(char_bones_samples: &CharBonesSamples, writer: &mut Box<BinaryStream>, version: u32) -> Result<(), Box<dyn Error>> {
+pub(crate) fn save_char_bones_samples_data(char_bones_samples: &CharBonesSamples, writer: &mut Box<BinaryStream>) -> Result<(), Box<dyn Error>> {
     let samples = match &char_bones_samples.samples {
         EncodedSamples::Uncompressed(samples) => samples,
         EncodedSamples::Compressed(_, raw_samples) => {
