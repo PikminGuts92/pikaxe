@@ -9,12 +9,17 @@ const MAX_DELTA: u64 = 1 << 27;
 
 impl MidiFile {
     pub fn from_path<T: AsRef<Path>>(path: T) -> Option<MidiFile> {
+        let mid_file = fs::File::open(path).ok()?;
+        Self::from_stream(mid_file)
+    }
+
+    pub fn from_stream<T: std::io::Read>(mut stream: T) -> Option<MidiFile> {
         // TODO: Use result w/ custom error
-        let path = path.as_ref();
+        let mut mid_bytes = Vec::new();
+        stream.read_to_end(&mut mid_bytes).ok()?;
         let mut mid = MidiFile::default();
 
         // Load midi file using lib
-        let mid_bytes = fs::read(path).ok()?;
         let smf = Smf::parse(&mid_bytes).ok()?;
 
         // TODO: Don't bother re-mapping and just re-export enum
