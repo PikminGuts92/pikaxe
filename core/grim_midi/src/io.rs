@@ -14,13 +14,18 @@ impl MidiFile {
     }
 
     pub fn from_stream<T: std::io::Read>(mut stream: T) -> Option<MidiFile> {
-        // TODO: Use result w/ custom error
         let mut mid_bytes = Vec::new();
         stream.read_to_end(&mut mid_bytes).ok()?;
+
+        Self::from_stream(mid_bytes.as_slice())
+    }
+
+    pub fn from_slice(data: &[u8]) -> Option<MidiFile> {
+        // TODO: Use result w/ custom error
         let mut mid = MidiFile::default();
 
         // Load midi file using lib
-        let smf = Smf::parse(&mid_bytes).ok()?;
+        let smf = Smf::parse(&data).ok()?;
 
         // TODO: Don't bother re-mapping and just re-export enum
         mid.format = match &smf.header.format {
