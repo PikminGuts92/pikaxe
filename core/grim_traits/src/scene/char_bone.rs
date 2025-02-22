@@ -1,8 +1,8 @@
 #[allow(non_camel_case_types)]
-#[derive(Clone, Copy)]
+#[derive(Default, Clone, Copy)]
 #[repr(u32)]
 pub enum RotationConstraint {
-    kRotNone = 9,
+    #[default] kRotNone = 9,
     kRotFull = 2,
     kRotX = 3,
     kRotY = 4,

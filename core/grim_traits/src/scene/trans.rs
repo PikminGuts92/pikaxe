@@ -1,10 +1,10 @@
 use super::{Matrix, MiloObject};
 
 #[allow(non_camel_case_types)]
-#[derive(Clone, Copy)]
+#[derive(Default, Clone, Copy)]
 #[repr(u32)]
 pub enum TransConstraint {
-    kConstraintNone,
+    #[default] kConstraintNone,
     kConstraintLocalRotate,
     kConstraintParentWorld,
     kConstraintLookAtTarget,
@@ -13,12 +13,6 @@ pub enum TransConstraint {
     kConstraintBillboardXZ,
     kConstraintBillboardXYZ,
     kConstraintFastBillboardXYZ
-}
-
-impl Default for TransConstraint {
-    fn default() -> TransConstraint {
-        TransConstraint::kConstraintNone
-    }
 }
 
 impl From<u32> for TransConstraint {
