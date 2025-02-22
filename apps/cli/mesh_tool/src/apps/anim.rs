@@ -15,6 +15,8 @@ pub struct AnimApp {
     pub output_path: String,
     #[arg(short, long, help = "Use big endian serialization")]
     pub big_endian: bool,
+    #[arg(short, long, help = "Optimize for smaller output file size")]
+    pub optimize: bool,
 }
 
 impl SubApp for AnimApp {
