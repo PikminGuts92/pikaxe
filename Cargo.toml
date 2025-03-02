@@ -15,7 +15,7 @@ resolver = "2"
 [workspace.package]
 version = "0.1.0"
 authors = ["PikminGuts92"]
-edition = "2021"
+edition = "2024"
 
 [workspace.dependencies]
 clap = { version = "4.5.16", features = ["derive"] }
