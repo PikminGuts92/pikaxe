@@ -17,7 +17,7 @@ impl MidiFile {
         let mut mid_bytes = Vec::new();
         stream.read_to_end(&mut mid_bytes).ok()?;
 
-        Self::from_stream(mid_bytes.as_slice())
+        Self::from_slice(mid_bytes.as_slice())
     }
 
     pub fn from_slice(data: &[u8]) -> Option<MidiFile> {
