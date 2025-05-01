@@ -23,6 +23,7 @@ fn is_version_supported(version: u32) -> bool {
         22 => true,      // AntiGrav
         25 => true,      // GH1
         28 => true,      // GH2/GH2 360
+        33 => true,
         34 => true,      // RB1/RB2
         36 | 37 => true, // TBRB/GDRB
         38 => true,      // RB3
@@ -296,7 +297,7 @@ impl ObjectReadWrite for MeshObject {
                     vec.uv.v = reader.read_float32()?;
                 }
 
-                if version >= 34 {
+                if version >= 33 {
                     // Bone indices
                     vec.bones[0] = reader.read_uint16()?;
                     vec.bones[1] = reader.read_uint16()?;
