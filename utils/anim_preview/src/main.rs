@@ -5,9 +5,9 @@ use std::path::PathBuf;
 
 use keyframe::{CanTween, keyframes, Keyframe, AnimationSequence, functions::Linear, functions::EaseInOut};
 
-use grim::{Platform, SystemInfo};
-use grim::io::*;
-use grim::scene::{Anim, CharBoneSample, Object, ObjectDir, PackedObject, MeshAnim, MiloObject, Trans, Vector3};
+use pikaxe::{Platform, SystemInfo};
+use pikaxe::io::*;
+use pikaxe::scene::{Anim, CharBoneSample, Object, ObjectDir, PackedObject, MeshAnim, MiloObject, Trans, Vector3};
 
 use nalgebra as na;
 

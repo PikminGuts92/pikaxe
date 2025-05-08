@@ -1,0 +1,14 @@
+[package]
+name = "pikaxe_midi"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[dependencies]
+midly = { version = "0.5.3" }
+
+[dev-dependencies]
+rstest = { workspace = true }
+
+[lints]
+workspace = true

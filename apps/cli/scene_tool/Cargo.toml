@@ -6,7 +6,7 @@ edition.workspace = true
 
 [dependencies]
 clap = { workspace = true }
-grim = { workspace = true, features = [ "midi" ] }
+pikaxe = { workspace = true, features = [ "midi" ] }
 simplelog = { workspace = true }
 thiserror = { workspace = true }
 

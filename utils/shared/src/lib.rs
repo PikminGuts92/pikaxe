@@ -1,9 +1,9 @@
 use std::error::Error;
 use std::path::PathBuf;
 
-use grim::{SystemInfo};
-use grim::io::*;
-use grim::scene::{ObjectDir};
+use pikaxe::{SystemInfo};
+use pikaxe::io::*;
+use pikaxe::scene::{ObjectDir};
 
 pub struct MiloLoader {
     pub path: PathBuf,

@@ -6,11 +6,11 @@ edition.workspace = true
 
 [dependencies]
 clap = { workspace = true }
-grim = { workspace = true, features = [ "audio" ] }
+pikaxe = { workspace = true, features = [ "audio" ] }
 thiserror = { workspace = true }
 
 [features]
-encode = [ "grim/audio_experimental" ]
+encode = [ "pikaxe/audio_experimental" ]
 
 [lints]
 workspace = true

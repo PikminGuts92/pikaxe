@@ -1,8 +1,8 @@
 use crate::apps::SubApp;
-use grim::{Platform, SystemInfo};
-use grim::audio::*;
-use grim::io::{FileStream, IOEndian};
-use grim::scene::{ObjectReadWrite, SampleData, SynthSample};
+use pikaxe::{Platform, SystemInfo};
+use pikaxe::audio::*;
+use pikaxe::io::{FileStream, IOEndian};
+use pikaxe::scene::{ObjectReadWrite, SampleData, SynthSample};
 
 use clap::Parser;
 use std::error::Error;
@@ -93,7 +93,7 @@ impl SubApp for DecoderApp {
 
                 //decode_synth_sample_file(input_path, &sys_info)?
                 let xma = generate_xma_from_synth_sample(input_path, &sys_info)?;
-                let mut file = grim::io::create_new_file(output_path)?;
+                let mut file = pikaxe::io::create_new_file(output_path)?;
                 file.write_all(&xma)?;
             },
             FileType::Vgs => {

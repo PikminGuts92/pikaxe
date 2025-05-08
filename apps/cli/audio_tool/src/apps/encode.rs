@@ -1,8 +1,8 @@
 use crate::apps::SubApp;
-use grim::{Platform, SystemInfo};
-use grim::audio::*;
-use grim::io::{FileStream, IOEndian};
-use grim::scene::{ObjectReadWrite, SampleData, SynthSample};
+use pikaxe::{Platform, SystemInfo};
+use pikaxe::audio::*;
+use pikaxe::io::{FileStream, IOEndian};
+use pikaxe::scene::{ObjectReadWrite, SampleData, SynthSample};
 
 use clap::Parser;
 use std::error::Error;

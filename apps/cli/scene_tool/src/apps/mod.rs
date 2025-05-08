@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 use std::error::Error;
 
-use grim::SystemInfo;
+use pikaxe::SystemInfo;
 
 mod dir2milo;
 mod milo2dir;

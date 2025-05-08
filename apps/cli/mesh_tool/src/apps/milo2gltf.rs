@@ -5,9 +5,9 @@ use std::error::Error;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use grim::{Platform, SystemInfo};
-use grim::model::*;
-use grim::io::*;
+use pikaxe::{Platform, SystemInfo};
+use pikaxe::model::*;
+use pikaxe::io::*;
 
 #[derive(Parser, Debug)]
 pub struct Milo2GltfApp {

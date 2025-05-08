@@ -21,7 +21,7 @@ edition = "2024"
 clap = { version = "4.5.16", features = ["derive"] }
 gltf = { version = "=1.4.1", default-features = false, features = [ "import", "names", "utils" ] }
 gltf-json = { version = "=1.4.1", features = [ "names" ] }
-grim = { path = "core/grim" }
+pikaxe = { path = "core/pikaxe" }
 itertools = "0.13.0"
 lazy_static = "1.5.0"
 log = "0.4.22"

@@ -5,4 +5,4 @@ authors.workspace = true
 edition.workspace = true
 
 [dependencies]
-grim = { workspace = true }
+pikaxe = { workspace = true }

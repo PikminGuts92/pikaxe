@@ -6,10 +6,10 @@ use std::{arch, fs};
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 
-use grim::{Platform, SystemInfo};
-use grim::io::*;
-use grim::scene::{EncodedSamples, Object, ObjectDir, ObjectReadWrite, PackedObject, Tex};
-use grim::texture::{Bitmap, Image, swap_image_bytes, write_rgba_to_file};
+use pikaxe::{Platform, SystemInfo};
+use pikaxe::io::*;
+use pikaxe::scene::{EncodedSamples, Object, ObjectDir, ObjectReadWrite, PackedObject, Tex};
+use pikaxe::texture::{Bitmap, Image, swap_image_bytes, write_rgba_to_file};
 
 
 #[derive(Parser, Debug)]

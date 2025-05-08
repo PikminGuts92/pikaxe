@@ -6,9 +6,9 @@ use std::error::Error;
 use std::path::Path;
 
 
-use grim::{Platform, SystemInfo};
-use grim::io::*;
-use grim::scene::{Object, ObjectDir, PackedObject, Tex};
+use pikaxe::{Platform, SystemInfo};
+use pikaxe::io::*;
+use pikaxe::scene::{Object, ObjectDir, PackedObject, Tex};
 
 
 #[derive(Parser, Debug)]

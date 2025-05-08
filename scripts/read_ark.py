@@ -1,11 +1,11 @@
-import grim
+import pikaxe
 import sys
 
 def main(args: list[str]):
     ark_path = args[0]
     print(f'Opening ark from \'{ark_path}\'')
 
-    ark = grim.Ark.from_file_path(ark_path)
+    ark = pikaxe.Ark.from_file_path(ark_path)
     ark_entries = ark.entries
 
     print(f'Ark: (version = {ark.version}, encryption = {ark.encryption})')

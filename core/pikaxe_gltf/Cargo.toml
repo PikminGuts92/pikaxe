@@ -1,0 +1,14 @@
+[package]
+name = "pikaxe_gltf"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[dependencies]
+gltf = { workspace = true }
+gltf-json = { workspace = true }
+itertools = { workspace = true }
+serde = { workspace = true }
+
+[lints]
+workspace = true

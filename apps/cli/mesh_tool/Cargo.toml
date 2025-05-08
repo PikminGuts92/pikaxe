@@ -6,7 +6,7 @@ edition.workspace = true
 
 [dependencies]
 clap = { workspace = true }
-grim = { workspace = true, features = [ "model" ] }
+pikaxe = { workspace = true, features = [ "model" ] }
 thiserror = { workspace = true }
 
 [lints]

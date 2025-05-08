@@ -6,10 +6,10 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 
-use grim::{Platform, SystemInfo};
-use grim::io::*;
-use grim::scene::{Object, ObjectDir, PackedObject, Tex};
-use grim::texture::write_rgba_to_file;
+use pikaxe::{Platform, SystemInfo};
+use pikaxe::io::*;
+use pikaxe::scene::{Object, ObjectDir, PackedObject, Tex};
+use pikaxe::texture::write_rgba_to_file;
 
 // TODO: Use this error somewhere or refactor
 #[derive(Debug, Error)]
@@ -172,7 +172,7 @@ fn extract_tex_object(tex: &Tex, entry_dir: &PathBuf, info: &SystemInfo) -> Resu
     Ok(())
 }
 
-fn compare_entries_by_name(a : &grim::scene::Object, b: &grim::scene::Object) -> Ordering {
+fn compare_entries_by_name(a : &pikaxe::scene::Object, b: &pikaxe::scene::Object) -> Ordering {
     // Get entry types
     let a_type = a.get_type();
     let b_type = b.get_type();

@@ -3,9 +3,9 @@ use clap::Parser;
 
 use std::error::Error;
 
-use grim::{Platform, SystemInfo};
-use grim::model::*;
-use grim::io::*;
+use pikaxe::{Platform, SystemInfo};
+use pikaxe::model::*;
+use pikaxe::io::*;
 
 #[derive(Parser, Debug)]
 pub struct AnimApp {

@@ -3,10 +3,10 @@ use std::error::Error;
 use std::io::prelude::*;
 use std::path::PathBuf;
 
-use grim::{Platform, SystemInfo};
-use grim::audio::open_wav;
-use grim::io::*;
-use grim::scene::{Anim, CharBoneSample, Object, ObjectDir, PackedObject, MeshAnim, MiloObject, Trans, Vector3};
+use pikaxe::{Platform, SystemInfo};
+use pikaxe::audio::open_wav;
+use pikaxe::io::*;
+use pikaxe::scene::{Anim, CharBoneSample, Object, ObjectDir, PackedObject, MeshAnim, MiloObject, Trans, Vector3};
 
 use eframe::{egui::{self, Align, Align2, Color32, FontId, Pos2, RichText, Visuals, Widget}, glow};
 use egui::widgets::global_dark_light_mode_switch;

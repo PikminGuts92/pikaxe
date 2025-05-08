@@ -5,7 +5,7 @@ authors.workspace = true
 edition.workspace = true
 
 [dependencies]
-grim = { workspace = true, features = [ "audio" ] }
+pikaxe = { workspace = true, features = [ "audio" ] }
 eframe = "0.28.1"
 egui_plot = "0.28.1"
 keyframe = "1.1.1"

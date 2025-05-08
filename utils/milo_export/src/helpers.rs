@@ -1,7 +1,7 @@
-use grim::dta::DataArray;
-use grim::{Platform, SystemInfo};
-use grim::io::*;
-use grim::scene::{Object, ObjectDir, ObjectDirBase, PackedObject, PropAnim, PropKeysEvents, Tex, AnimRate};
+use pikaxe::dta::DataArray;
+use pikaxe::{Platform, SystemInfo};
+use pikaxe::io::*;
+use pikaxe::scene::{Object, ObjectDir, ObjectDirBase, PackedObject, PropAnim, PropKeysEvents, Tex, AnimRate};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;

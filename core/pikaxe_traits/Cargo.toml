@@ -1,0 +1,8 @@
+[package]
+name = "pikaxe_traits"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[lints]
+workspace = true

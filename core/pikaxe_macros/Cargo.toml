@@ -1,0 +1,18 @@
+[package]
+name = "pikaxe_macros"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[lib]
+proc-macro = true
+
+[dependencies]
+pikaxe_traits = { path = "../pikaxe_traits" }
+lazy_static = { workspace = true }
+proc-macro2 = "1.0.86"
+quote = "1.0.37"
+syn = { version = "2.0.76", default-features = false, features = [ "clone-impls", "derive", "parsing", "printing", "proc-macro" ] }
+
+[lints]
+workspace = true

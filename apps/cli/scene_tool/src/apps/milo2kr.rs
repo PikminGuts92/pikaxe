@@ -7,10 +7,10 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 
-use grim::{Platform, SystemInfo};
-use grim::io::*;
-use grim::midi::{MidiEvent, MidiTextType, MidiFile, MidiTempo, MidiText, MidiTrack};
-use grim::scene::{AnimEvent, CharLipSync, Object, ObjectDir, ObjectDirBase, MiloObject, Morph, MorphPose, PackedObject, Quat, Tex, TransAnim};
+use pikaxe::{Platform, SystemInfo};
+use pikaxe::io::*;
+use pikaxe::midi::{MidiEvent, MidiTextType, MidiFile, MidiTempo, MidiText, MidiTrack};
+use pikaxe::scene::{AnimEvent, CharLipSync, Object, ObjectDir, ObjectDirBase, MiloObject, Morph, MorphPose, PackedObject, Quat, Tex, TransAnim};
 
 #[derive(Parser, Debug)]
 pub struct Milo2KrApp {

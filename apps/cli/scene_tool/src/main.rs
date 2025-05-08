@@ -10,7 +10,7 @@ const LOG_LEVEL: LevelFilter = LevelFilter::Info;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let log_config = ConfigBuilder::new()
-        .add_filter_allow_str("grim")
+        .add_filter_allow_str("pikaxe")
         .add_filter_allow_str("scene_tool")
         .build();
 
