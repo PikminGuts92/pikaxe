@@ -393,7 +393,7 @@ impl CharBonesSamples {
         bone_samples
     }
 
-    pub(crate) fn get_sample_count(&self) -> usize {
+    pub fn get_sample_count(&self) -> usize {
         match &self.samples {
             EncodedSamples::Compressed(_, raw_samples) => raw_samples.len(),
             EncodedSamples::Uncompressed(samples) => samples
