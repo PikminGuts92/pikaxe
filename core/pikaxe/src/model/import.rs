@@ -35,8 +35,8 @@ pub struct SceneHelper {
 
 #[derive(Default)]
 pub struct MiloAssets {
-    char_bones: Vec<CharBone>,
-    char_clip_samples: Vec<CharClipSamples>,
+    pub char_bones: Vec<CharBone>,
+    pub char_clip_samples: Vec<CharClipSamples>,
 }
 
 fn find_chidren_of_ignored_bones(node: &Node<'_>, ignored: &[&str], is_ignored: bool) -> Vec<usize> {
