@@ -61,18 +61,19 @@ impl From<u32> for Mutable {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct BoneTrans {
     pub name: String,
     pub trans: Transform,
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct UV {
     pub u: f32,
     pub v: f32,
 }
 
+#[derive(Clone)]
 pub struct Vert {
     pub pos: Vector4,
     pub normals: Vector4,
@@ -108,8 +109,15 @@ impl Default for Vert {
 pub struct MeshComponent {
     pub mat: String,
     pub geom_owner: String,
+
     pub mutable: Mutable,
     pub volume: Volume,
+
+    pub vertices: Vec<Vert>,
+    pub faces: Vec<[u16; 3]>,
+
+    pub face_groups: Vec<u8>,
+    pub bones: Vec<BoneTrans>,
     pub keep_mesh_data: bool,
     pub exclude_from_self_shadow: bool,
     pub has_ao_calculation: bool,

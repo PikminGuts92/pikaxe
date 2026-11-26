@@ -319,7 +319,7 @@ impl PartialEq for Vector3 {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct Vector4 {
     pub x: f32,
     pub y: f32,
