@@ -1,4 +1,5 @@
 mod draw;
+mod mesh;
 mod object;
 mod object_dir;
 mod trans;
@@ -8,6 +9,7 @@ use bevy_ecs::{
     prelude::*,
 };
 use draw::*;
+use mesh::*;
 use object::*;
 use object_dir::*;
 use std::marker::PhantomData;
