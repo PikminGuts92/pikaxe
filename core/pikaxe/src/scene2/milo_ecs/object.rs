@@ -12,22 +12,9 @@ pub struct ObjectComponent {
 
 pub trait Object { // Default + Clone + Bundle
     fn get_class_name(&self) -> &'static str;
-    //fn get_super_classes() -> &'static [&'static str];
 
     fn get_object_component(&self) -> &ObjectComponent;
     fn get_object_component_mut(&mut self) -> &mut ObjectComponent;
-
-    /*fn is_derived_from(&self, class_name: &str) -> bool {
-        let self_class_name = Self::get_class_name();
-        if self_class_name.eq(class_name) {
-            return true;
-        }
-
-        // How to check supers of supers?
-        //let super_class_names = Self::get_super_classes();
-
-        false
-    }*/
 
     fn get_id(&self) -> u32 {
         self.get_object_component().id
@@ -49,12 +36,6 @@ pub trait Object { // Default + Clone + Bundle
         self.get_object_component_mut().note = value;
     }
 }
-
-/*impl Default for Box<dyn Object> {
-    fn default() -> Self {
-        Box::new(ObjectInstance::default())
-    }
-}*/
 
 pub(crate) trait LoadObjectFromQuery : Object + Sized {
     fn load_from_query_with_id(world: &mut World, entity: Entity) -> Option<Self>;
@@ -90,10 +71,6 @@ impl Object for ObjectInstance {
         "Object"
     }
 
-    /*fn get_super_classes() -> &'static [&'static str] {
-        &[]
-    }*/
-
     fn get_object_component(&self) -> &ObjectComponent {
         &self.object
     }
@@ -114,20 +91,6 @@ impl From<ObjectInstance> for ObjectTyped {
         ObjectTyped::Object(value.into())
     }
 }
-
-/*impl Object for Box<dyn Object> {
-    fn get_class_name() -> &'static str {
-        "Object"
-    }
-
-    fn get_object_component(&self) -> &ObjectComponent {
-        todo!()
-    }
-
-    fn get_object_component_mut(&mut self) -> &mut ObjectComponent {
-        todo!()
-    }
-}*/
 
 // Python bindings
 

@@ -21,10 +21,6 @@ impl Object for ObjectDirInstance {
         "ObjectDir"
     }
 
-    /*fn get_super_classes() -> &'static [&'static str] {
-        &["Object"]
-    }*/
-
     fn get_object_component(&self) -> &ObjectComponent {
         &self.object
     }
