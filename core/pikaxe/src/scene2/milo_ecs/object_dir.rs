@@ -1,5 +1,5 @@
 use bevy_ecs::prelude::*;
-use pikaxe_derive::autotrait;
+use pikaxe_derive::{autotrait, milo};
 use pyo3::{prelude::*, types::PyType};
 use super::{Object, ObjectComponent, ObjectNamedPointer, ObjectPython};
 
@@ -10,34 +10,11 @@ pub struct ObjectDirComponent {
     pub entries: Vec<ObjectNamedPointer>,
 }
 
+#[milo(class_name="ObjectDir")]
 #[derive(Default, Clone, Bundle)]
 pub struct ObjectDirInstance {
     pub(crate) object: ObjectComponent,
     pub(crate) object_dir: ObjectDirComponent,
-}
-
-impl Object for ObjectDirInstance {
-    fn get_class_name(&self) -> &'static str {
-        "ObjectDir"
-    }
-
-    fn get_object_component(&self) -> &ObjectComponent {
-        &self.object
-    }
-
-    fn get_object_component_mut(&mut self) -> &mut ObjectComponent {
-        &mut self.object
-    }
-}
-
-impl ObjectDir for ObjectDirInstance {
-    fn get_object_dir_component(&self) -> &ObjectDirComponent {
-        &self.object_dir
-    }
-
-    fn get_object_dir_component_mut(&mut self) -> &mut ObjectDirComponent {
-        &mut self.object_dir
-    }
 }
 
 // Python bindings

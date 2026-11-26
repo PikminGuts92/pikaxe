@@ -1,5 +1,5 @@
 use bevy_ecs::prelude::*;
-use pikaxe_derive::autotrait;
+use pikaxe_derive::{autotrait, milo};
 use pyo3::{prelude::*, types::PyType};
 use super::ObjectTyped;
 
@@ -41,6 +41,7 @@ pub(crate) trait LoadObjectFromQuery : Object + Sized {
     fn load_from_query_with_id(world: &mut World, entity: Entity) -> Option<Self>;
 }
 
+#[milo(class_name="Object")]
 #[derive(Default, Clone, Bundle)]
 //#[pyclass(name="Object", subclass)]
 pub struct ObjectInstance {
@@ -63,20 +64,6 @@ impl LoadObjectFromQuery for ObjectInstance {
         Some(Self {
             object: obj_data.object.to_owned()
         })
-    }
-}
-
-impl Object for ObjectInstance {
-    fn get_class_name(&self) -> &'static str {
-        "Object"
-    }
-
-    fn get_object_component(&self) -> &ObjectComponent {
-        &self.object
-    }
-
-    fn get_object_component_mut(&mut self) -> &mut ObjectComponent {
-        &mut self.object
     }
 }
 

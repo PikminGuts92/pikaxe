@@ -1,5 +1,5 @@
 use bevy_ecs::prelude::*;
-use pikaxe_derive::autotrait;
+use pikaxe_derive::{autotrait, milo};
 use pyo3::{prelude::*, types::PyType};
 use super::{Object, ObjectComponent, ObjectNamedPointer, ObjectPython, ObjectTyped};
 
@@ -56,34 +56,11 @@ pub struct TransComponent {
     pub parent: ObjectNamedPointer,
 }
 
+#[milo(class_name="Trans")]
 #[derive(Default, Clone, Bundle)]
 pub struct TransInstance {
     pub(crate) object: ObjectComponent,
     pub(crate) trans: TransComponent,
-}
-
-impl Object for TransInstance {
-    fn get_class_name(&self) -> &'static str {
-        "Trans"
-    }
-
-    fn get_object_component(&self) -> &ObjectComponent {
-        &self.object
-    }
-
-    fn get_object_component_mut(&mut self) -> &mut ObjectComponent {
-        &mut self.object
-    }
-}
-
-impl Trans for TransInstance {
-    fn get_trans_component(&self) -> &TransComponent {
-        &self.trans
-    }
-
-    fn get_trans_component_mut(&mut self) -> &mut TransComponent {
-        &mut self.trans
-    }
 }
 
 impl From<TransInstance> for Box<dyn Trans> {
